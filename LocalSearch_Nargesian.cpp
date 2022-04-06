@@ -51,6 +51,14 @@ class Organization
 
 };
 
+class Cluster
+{
+    public:
+        State *state = NULL;
+        int id_dist_matrix;
+        Cluster *is_NN_of = NULL; //IS NEAREST NEIGHBOR OF
+}
+
 float cossine_similarity(float *vector_1, float *vector_2, int dim){
     float inner_product = 0;
     float norm_1 = 0;
@@ -137,12 +145,80 @@ Organization generate_basic_organization(Instance * inst, float gamma)
     
 }
 
+Cluster** init_clusters(Instance * inst)
+{
+    int N = inst->total_num_columns;
+    Cluster** active_clusters = new Cluster*[2*N-1];
+
+    int id = 0;
+    State *state;
+    Cluster *cluster;
+    //Leaf nodes (columns representation) creation
+    for (int i = 0; i < inst->num_tables; i++)
+    {
+        for (int j = 0; j < inst->tables[i]->ncols; j++)
+        {
+            state = new State;
+            state->table_id = i;
+            state->column_id = j;
+            state->sum_vector = inst->tables[i]->sum_vectors[j];
+            state->sample_size = inst->tables[i]->nrows;
+
+            cluster = new Cluster;
+            cluster->state = state;
+            cluster->id_dist_matrix = id;
+            active_clusters[id] = cluster;
+            id++;
+        }   
+    }
+    return active_clusters;
+}
+
+int** init_UPGMA_dist_matrix(Cluster** active_clusters, int total_num_columns, int embedding_dim)
+{
+    int size = 2 * total_num_columns - 1;
+    int **dist_matrix = new int*[size];
+
+    State *state_i, *state_j;
+
+    for(int i = 0; i < total_num_columns; i++)
+    {
+        state_i = active_clusters[i]->state;
+        dist_matrix[i] = new int[size];
+        dist_matrix[i][i] = 0;
+        for(int j = i+1; j < total_num_columns; j++)
+        {
+            state_j = active_clusters[j]->state;
+            dist_matrix[i][j] = 1 - cossine_similarity(state_i->sum_vector, state_j->sum_vector, embedding_dim);
+            dist_matrix[j][i] = dist_matrix[i][j];
+        }
+    }
+    return dist_matrix;
+}
+
 //GENERATE A ORGANIZATION BY HIERARQUICAL CLUSTERING
+//ALGORITHM: NEAREST NEIGHBORS CHAIN -> O(N²)
+//DISTANCE BETWEEN CLUSTERS: UNWEIGHTED PAIR-GROUP METHOD WITH ARITHMETIC MEAN (UPGMA)
 Organization generate_organization_by_clustering(Instance * inst, float gamma)
 {
-    Organization org = generate_basic_organization(inst, gamma);
+    //Organizatio setup
+    Organization org;
+    org.embedding_dim = inst->embedding_dim;
+    org.gamma = gamma;
 
-    
+    Cluster** active_clusters = init_clusters(inst);
+    dist_matrix = init_UPGMA_dist_matrix(active_clusters, inst->total_num_columns, inst->embedding_dim);
+
+    Cluster *top_stack = active_clusters[0];
+    active_clusters[0] = NULL;
+
+    int min_pos = 1;
+    int max_pos = inst->total_num_columns-1;
+
+    for(int i = 0; i < inst->total_num_columns-1; i++)
+    {
+
+    }
 
     return org;
 }
