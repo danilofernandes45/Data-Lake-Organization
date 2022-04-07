@@ -55,7 +55,7 @@ class Cluster
 {
     public:
         State *state = NULL;
-        int id_dist_matrix;
+        int id; // DISTANCES MATRIX ID
         Cluster *is_NN_of = NULL; //IS NEAREST NEIGHBOR OF
         Cluster *next = NULL; // CHAINED LIST OF ACTIVE CLUSTERS
 };
@@ -166,7 +166,7 @@ Cluster* init_clusters(Instance * inst)
 
             current = new Cluster;
             current->state = state;
-            current->id_dist_matrix = id;
+            current->id = id;
 
             if(active_clusters == NULL)
                 active_clusters = current;
@@ -180,10 +180,10 @@ Cluster* init_clusters(Instance * inst)
     return active_clusters;
 }
 
-int** init_UPGMA_dist_matrix(Cluster* active_clusters, int total_num_columns, int embedding_dim)
+float** init_dist_matrix(Cluster* active_clusters, int total_num_columns, int embedding_dim)
 {
     int size = 2 * total_num_columns - 1;
-    int **dist_matrix = new int*[size];
+    float **dist_matrix = new float*[size];
 
     Cluster *cluster_i = active_clusters;
     Cluster *cluster_j;
@@ -191,7 +191,7 @@ int** init_UPGMA_dist_matrix(Cluster* active_clusters, int total_num_columns, in
     for(int i = 0; i < total_num_columns; i++)
     {
         cluster_j = cluster_i->next;
-        dist_matrix[i] = new int[size];
+        dist_matrix[i] = new float[size];
         dist_matrix[i][i] = 0;
         for(int j = i+1; j < total_num_columns; j++)
         {
@@ -201,7 +201,22 @@ int** init_UPGMA_dist_matrix(Cluster* active_clusters, int total_num_columns, in
         }
         cluster_i = cluster_i->next;
     }
+
+    for(int i = total_num_columns; i < size; i++)
+        dist_matrix[i] = new float[size];
+    
     return dist_matrix;
+}
+
+//MERGE THE LAST TWO CLUSTER OF NN CHAIN AND ADD THE NEW CLUSTER INTO UNMERGED CLUSTERS LIST 
+Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, Cluster *active_clusters)
+{
+    int id_1 = stack->id;
+    int id_2 = stack->is_NN_of->id;
+    State *state_1 = stack->state;
+    State *state_2 = stack->is_NN_of->state;
+
+    State *new_state = new State;
 }
 
 //GENERATE A ORGANIZATION BY HIERARQUICAL CLUSTERING
@@ -209,23 +224,58 @@ int** init_UPGMA_dist_matrix(Cluster* active_clusters, int total_num_columns, in
 //DISTANCE BETWEEN CLUSTERS: UNWEIGHTED PAIR-GROUP METHOD WITH ARITHMETIC MEAN (UPGMA)
 Organization generate_organization_by_clustering(Instance * inst, float gamma)
 {
-    //Organizatio setup
+    //Organization setup
     Organization org;
     org.embedding_dim = inst->embedding_dim;
     org.gamma = gamma;
 
-    Cluster* active_clusters = init_clusters(inst);
-    int** dist_matrix = init_UPGMA_dist_matrix(active_clusters, inst->total_num_columns, inst->embedding_dim);
+    Cluster* active_clusters = init_clusters(inst); // CHAINED LIST OF CLUSTERS AVAILABLE TO BE ADDED TO NN CHAIN
+    float** dist_matrix = init_dist_matrix(active_clusters, inst->total_num_columns, inst->embedding_dim); // DISTANCE BETWEEN ALL CLUSTERS
 
-    Cluster *top_stack = active_clusters;
-    Cluster *prev_best, *next;
+    Cluster *stack = active_clusters; //NEAREST NEIGHBORS CHAIN
+    active_clusters = active_clusters->next; // REMOVE THE HEAD FROM CHAINED LIST AND ADD TO NN CHAIN
+
+    Cluster *prev_nn, *nn; // PREVIOUS NN CLUSTER AND NN CLUSTER IN CHAINED LIST
+    Cluster *previous, *current; // ITERATORS
+
+    int cluster_id = inst->total_num_columns; // MATRIX ID OF THE NEXT CLUSTER THAT WILL BE CREATED
     
+    //WHILE THERE ARE CLUSTERS TO MERGE 
     while(active_clusters->next != NULL)
     {
+        prev_nn = NULL;
+        nn = active_clusters;
+        previous = active_clusters;
+        current = active_clusters->next;
         //FIND NEAREST NEIGHBOR TO TOP STACK CLUSTER
-        
-    }
+        while(current != NULL)
+        {
+            if(dist_matrix[stack->id][current->id] < dist_matrix[stack->id][nn->id])
+            {
+                prev_nn = previous;
+                nn = current;
+            }
+            previous = current;
+            current = current->next;
+        }
+        //REMOVE NN FROM THE CHAINED LIST
+        if(prev_nn == NULL)
+            active_clusters = nn->next;
+        else
+            prev_nn->next = nn->next;
 
+        //CHECK IF A PAIR OF RNN WERE FOUND
+        if( stack->is_NN_of == nn ){
+            active_clusters = merge_clusters(stack, dist_matrix, cluster_id, active_clusters);
+            stack = stack->is_NN_of->is_NN_of; //UNSTACK THE RNN
+            cluster_id++;
+        }
+        //ADD NN TO THE NN CHAIN
+        else {
+            nn->is_NN_of = stack;
+            stack = nn;
+        }
+    }
     return org;
 }
 
