@@ -211,17 +211,19 @@ Cluster* init_clusters(Instance * inst)
 
 float** init_dist_matrix(Cluster* active_clusters, int total_num_columns, int embedding_dim)
 {
-    int size = 2 * total_num_columns - 1;
-    float **dist_matrix = new float*[size];
 
     Cluster *cluster_i = active_clusters;
     Cluster *cluster_j;
 
-    for(int i = 0; i < total_num_columns; i++)
+    int size = 2 * total_num_columns - 1;
+    float **dist_matrix = new float*[size];
+    //Init dist_matrix with zeros
+    for(int i = 0; i < size; i++)
+        dist_matrix[i] = new float[size];
+
+    for(int i = 0; i < total_num_columns-1; i++)
     {
         cluster_j = cluster_i->next;
-        dist_matrix[i] = new float[size];
-        dist_matrix[i][i] = 0;
         for(int j = i+1; j < total_num_columns; j++)
         {
             dist_matrix[i][j] = 1 - cossine_similarity(cluster_i->state->sum_vector, cluster_j->state->sum_vector, embedding_dim);
@@ -230,15 +232,19 @@ float** init_dist_matrix(Cluster* active_clusters, int total_num_columns, int em
         }
         cluster_i = cluster_i->next;
     }
-
-    for(int i = total_num_columns; i < size; i++)
-        dist_matrix[i] = new float[size];
     
+    //TEST!
+    for(int i=0; i<total_num_columns; i++){
+        for(int j =0; j<total_num_columns; j++)
+            printf("%.2f ", dist_matrix[i][j]);
+        printf("\n");
+    }
+
     return dist_matrix;
 }
 
 //MERGE THE LAST TWO CLUSTER OF NN CHAIN AND ADD THE NEW CLUSTER INTO UNMERGED CLUSTERS LIST 
-Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, int embbeding_dim)
+Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, int embedding_dim)
 {
     int id_1 = stack->id;
     int id_2 = stack->is_NN_of->id;
@@ -252,8 +258,8 @@ Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, int
     //CREATE A NEW STATE IN THE ORGANIZATION WHICH WILL BE PARENT OF RNN STATES
     State *new_state = new State;
 
-    new_state->sum_vector = new float[embbeding_dim];
-    for (int i = 0; i < embbeding_dim; i++)
+    new_state->sum_vector = new float[embedding_dim];
+    for (int i = 0; i < embedding_dim; i++)
         new_state->sum_vector[i] = state_1->sum_vector[i] + state_2->sum_vector[i];
 
     new_state->sample_size = state_1->sample_size + state_2->sample_size;
@@ -274,7 +280,13 @@ Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, int
         dist_matrix[cluster_id][i] = ( card_1 * dist_matrix[id_1][i] + card_2 * dist_matrix[id_2][i] ) / ( card_1 + card_2 );
         dist_matrix[i][cluster_id] = dist_matrix[cluster_id][i];
     }
-    dist_matrix[cluster_id][cluster_id] = 0;
+
+    //TEST!
+    for(int i=0; i <= cluster_id; i++){
+        for(int j =0; j <= cluster_id; j++)
+            printf("%.2f ", dist_matrix[i][j]);
+        printf("\n");
+    }
 
     return new_cluster;
 }
@@ -300,18 +312,22 @@ Organization generate_organization_by_clustering(Instance * inst, float gamma)
     Cluster *new_cluster;
 
     int cluster_id = inst->total_num_columns; // MATRIX ID OF THE NEXT CLUSTER THAT WILL BE CREATED
-    
+    float diff_dists;
+
     //WHILE THERE ARE CLUSTERS TO MERGE 
-    while(active_clusters->next != NULL)
+    while(stack != NULL)
     {
+        printf("%d ", stack->id);
         prev_nn = NULL;
         nn = active_clusters;
         previous = active_clusters;
         current = active_clusters->next;
+
         //FIND NEAREST NEIGHBOR TO TOP STACK CLUSTER
         while(current != NULL)
         {
-            if(dist_matrix[stack->id][current->id] < dist_matrix[stack->id][nn->id])
+            diff_dists = dist_matrix[stack->id][current->id] - dist_matrix[stack->id][nn->id];
+            if( diff_dists < 0 || ( diff_dists == 0 && current->id < nn->id ) )
             {
                 prev_nn = previous;
                 nn = current;
@@ -319,32 +335,58 @@ Organization generate_organization_by_clustering(Instance * inst, float gamma)
             previous = current;
             current = current->next;
         }
-        //REMOVE NN FROM THE CHAINED LIST
-        if(prev_nn == NULL)
-            active_clusters = nn->next;
-        else
-            prev_nn->next = nn->next;
 
         //CHECK IF A PAIR OF RNN WERE FOUND
-        if( stack->is_NN_of == nn ){
+        diff_dists = 1.0;
+        if( stack->is_NN_of != NULL ){
+            diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
+        }
+        if( diff_dists < 0 || ( diff_dists == 0 && stack->is_NN_of->id < nn->id ) )
+        {
+            printf("%d\n", stack->is_NN_of->id);
             //MERGE THE RNN INTO A NEW CLUSTER
             new_cluster = merge_clusters(stack, dist_matrix, cluster_id, org.embedding_dim);
             //ADD THE NEW CLUSTER INTO UNMERGED CLUSTER LIST
             new_cluster->next = active_clusters;
             active_clusters = new_cluster;
+            cluster_id++;
+
             //REMOVE THE RNN FROM NN CHAIN
             stack = stack->is_NN_of->is_NN_of;
-            cluster_id++;
-        }
-        //ADD NN TO THE NN CHAIN
-        else {
+            if(stack == NULL && active_clusters->next != NULL){
+                stack = active_clusters;
+                active_clusters = active_clusters->next;
+            }
+        } else {
+            //REMOVE NN FROM THE CHAINED LIST
+            if(prev_nn == NULL)
+                active_clusters = nn->next;
+            else
+                prev_nn->next = nn->next;
+            
+            //ADD NN TO THE NN CHAIN
+            printf("%d\n", nn->id);
             nn->is_NN_of = stack;
             stack = nn;
+
+            if( active_clusters == NULL ) {
+                active_clusters = merge_clusters(stack, dist_matrix, cluster_id, org.embedding_dim);
+                cluster_id++;
+                stack = stack->is_NN_of->is_NN_of;
+            }
         }
+        //Test!
+        printf("%d\n", stack->id);
+        current = active_clusters;
+        while(current != NULL){
+            printf("%d ", current->id);
+            current = current->next;
+        }
+        printf("\n\n");
     }
 
     org.root = active_clusters->state;
-    org.update_all_reach_probs(inst);
+    //org.update_all_reach_probs(inst);
     return org;
 }
 
@@ -399,7 +441,9 @@ int main()
     Instance instance = read_instance();
     float gamma = 1.0;
 
-    Organization org = generate_basic_organization(&instance, gamma);
+    // Cluster *active_clusters = init_clusters(&instance);
+    // init_dist_matrix(active_clusters, instance.total_num_columns, instance.embedding_dim);
+    Organization org = generate_organization_by_clustering(&instance, gamma);
 
     return 0;
 }
