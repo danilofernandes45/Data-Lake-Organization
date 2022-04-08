@@ -42,15 +42,6 @@ class State
         int column_id= -1;
 };
 
-class Organization
-{
-    public:
-        int embedding_dim;
-        State *root = NULL;
-        float gamma; // HYPERPARAMETER USED IN PROBABILITY ESTIMATION
-
-};
-
 class Cluster
 {
     public:
@@ -58,7 +49,44 @@ class Cluster
         int id; // DISTANCES MATRIX ID
         Cluster *is_NN_of = NULL; //IS NEAREST NEIGHBOR OF
         Cluster *next = NULL; // CHAINED LIST OF ACTIVE CLUSTERS
+        int cardinality; //NUMBER OF ELEMENTS CONTAINED IN THIS CLUSTERS
 };
+
+//CHAINED LIST (QUEUE)
+class Node
+{
+    public:
+        State *state = NULL;
+        Node *next = NULL;
+};
+
+class Organization
+{
+    public:
+        int embedding_dim;
+        State *root = NULL;
+        float gamma; // HYPERPARAMETER USED IN PROBABILITY ESTIMATION
+
+    void update_all_reach_probs(Instance *inst);
+
+};
+
+void Organization::update_all_reach_probs(Instance *inst){
+
+    this->root->level = 0;
+    this->root->overall_reach_prob = 1;
+    this->root->reach_probs = new float(inst->total_num_columns);
+    for (int i = 0; i < inst->total_num_columns; i++)
+        this->root->reach_probs[i] = 1.0;
+    
+    Node *queue = new Node;
+    queue->state = this->root;
+
+    while( queue != NULL )
+    {
+
+    }
+}
 
 float cossine_similarity(float *vector_1, float *vector_2, int dim){
     float inner_product = 0;
@@ -167,6 +195,7 @@ Cluster* init_clusters(Instance * inst)
             current = new Cluster;
             current->state = state;
             current->id = id;
+            current->cardinality = 1;
 
             if(active_clusters == NULL)
                 active_clusters = current;
@@ -209,14 +238,45 @@ float** init_dist_matrix(Cluster* active_clusters, int total_num_columns, int em
 }
 
 //MERGE THE LAST TWO CLUSTER OF NN CHAIN AND ADD THE NEW CLUSTER INTO UNMERGED CLUSTERS LIST 
-Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, Cluster *active_clusters)
+Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, int embbeding_dim)
 {
     int id_1 = stack->id;
     int id_2 = stack->is_NN_of->id;
+
+    int card_1 = stack->cardinality;
+    int card_2 = stack->is_NN_of->cardinality;
+
     State *state_1 = stack->state;
     State *state_2 = stack->is_NN_of->state;
 
+    //CREATE A NEW STATE IN THE ORGANIZATION WHICH WILL BE PARENT OF RNN STATES
     State *new_state = new State;
+
+    new_state->sum_vector = new float[embbeding_dim];
+    for (int i = 0; i < embbeding_dim; i++)
+        new_state->sum_vector[i] = state_1->sum_vector[i] + state_2->sum_vector[i];
+
+    new_state->sample_size = state_1->sample_size + state_2->sample_size;
+    new_state->children.push_back(state_1);
+    new_state->children.push_back(state_2);
+
+    state_1->parents.push_back(new_state);
+    state_2->parents.push_back(new_state);
+
+    //CREATE A NEW CLUSTER CONTAINING THE NEW STATE
+    Cluster *new_cluster = new Cluster;
+    new_cluster->state = new_state;
+    new_cluster->id = cluster_id;
+
+    //UPDATE DISTANCES MATRIX
+    for (int i = 0; i < cluster_id; i++)
+    {
+        dist_matrix[cluster_id][i] = ( card_1 * dist_matrix[id_1][i] + card_2 * dist_matrix[id_2][i] ) / ( card_1 + card_2 );
+        dist_matrix[i][cluster_id] = dist_matrix[cluster_id][i];
+    }
+    dist_matrix[cluster_id][cluster_id] = 0;
+
+    return new_cluster;
 }
 
 //GENERATE A ORGANIZATION BY HIERARQUICAL CLUSTERING
@@ -237,6 +297,7 @@ Organization generate_organization_by_clustering(Instance * inst, float gamma)
 
     Cluster *prev_nn, *nn; // PREVIOUS NN CLUSTER AND NN CLUSTER IN CHAINED LIST
     Cluster *previous, *current; // ITERATORS
+    Cluster *new_cluster;
 
     int cluster_id = inst->total_num_columns; // MATRIX ID OF THE NEXT CLUSTER THAT WILL BE CREATED
     
@@ -266,8 +327,13 @@ Organization generate_organization_by_clustering(Instance * inst, float gamma)
 
         //CHECK IF A PAIR OF RNN WERE FOUND
         if( stack->is_NN_of == nn ){
-            active_clusters = merge_clusters(stack, dist_matrix, cluster_id, active_clusters);
-            stack = stack->is_NN_of->is_NN_of; //UNSTACK THE RNN
+            //MERGE THE RNN INTO A NEW CLUSTER
+            new_cluster = merge_clusters(stack, dist_matrix, cluster_id, org.embedding_dim);
+            //ADD THE NEW CLUSTER INTO UNMERGED CLUSTER LIST
+            new_cluster->next = active_clusters;
+            active_clusters = new_cluster;
+            //REMOVE THE RNN FROM NN CHAIN
+            stack = stack->is_NN_of->is_NN_of;
             cluster_id++;
         }
         //ADD NN TO THE NN CHAIN
@@ -276,6 +342,9 @@ Organization generate_organization_by_clustering(Instance * inst, float gamma)
             stack = nn;
         }
     }
+
+    org.root = active_clusters->state;
+    org.update_all_reach_probs(inst);
     return org;
 }
 
