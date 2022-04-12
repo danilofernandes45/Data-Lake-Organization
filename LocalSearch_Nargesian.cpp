@@ -106,9 +106,10 @@ void State::update_children_reach_probs(Instance *inst, float gamma)
                     
                     prob = exp( gamma * current->similarities_vector[i] / parent->children.size() ) / sum_probs;
                     current->reach_probs[i] += prob * parent->reach_probs[i];
-                    //TEST!
-                    printf("%.3f ", current->reach_probs[i]);
                 }
+                //TEST!
+                printf("%.3f ", current->reach_probs[i]);
+                
                 current->overall_reach_prob += current->reach_probs[i];
             }
             current->overall_reach_prob /= inst->total_num_columns;
