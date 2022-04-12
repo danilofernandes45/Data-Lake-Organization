@@ -34,17 +34,73 @@ class State
         float *sum_vector; //SUM VECTOR REPRESENTATION OF THE STATE
         int sample_size;  // NUMBER OF VALUES (WORD VECTORS) UNDER ITS DOMAIN
         int level = -1;        // THE SHORTEST PATH LENGTH FROM THE ROOT
-        float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE (ONLY FOR NON-LEAF NODES)
-        float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE (ONLY FOR NON-LEAF NODES)
-        float discover_prob; // DISCOVER PROBABILITY OF A ATTRIBUTE REPRESENTED BY THE STATE (ONLY FOR LEAF NODES)
+        float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
+        float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
         vector<State*> parents;
         vector<State*> children;
+        float *similarities; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL
+        int *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
         int abs_column_id= -1; //ABSOLUTE COLUMN ID (ONLY FOR LEAF NODES)
-        float *similarities_vector; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL (ONLY FOR NON-LEAF NODES)
 
-    void update_children_reach_probs(Instance *inst, float gamma);
+        void update_reach_probs(float gamma, int total_num_columns);
 
 };
+
+// class Node
+// {
+//     public:
+//         State state;
+//         Node *next = NULL;
+// };
+
+// class Queue
+// {
+//     private:
+//         Node *head = NULL;
+//         Node *tail = NULL;
+//     public:
+//         void push(State *state);
+//         void pop();
+//         State* front();
+//         int empty();
+// };
+
+// void Queue::push(State *state)
+// {
+//     Node *new_node = new Node;
+//     new_node->state = *state;
+
+//     if(this->head == NULL){
+//         this->head = new_node;
+//         this->tail = new_node;
+//     } else {
+//         this->tail->next = new_node;
+//         this->tail = new_node;
+//     }
+// }
+
+// void Queue::pop()
+// {
+//     if(this->head != NULL){
+//         this->head = this->head->next;
+//         if(this->head == NULL)
+//             this->tail = NULL;
+//     }
+// }
+
+// State* Queue::front()
+// {
+//     if(this->head == NULL)
+//         return NULL;
+//     return &this->head->state;
+// }
+
+// int Queue::empty()
+// {
+//     if(this->head == NULL)
+//         return 1;
+//     return 0;
+// }
 
 class Cluster
 {
@@ -62,90 +118,71 @@ class Organization
         int embedding_dim;
         State *root = NULL;
         float gamma; // HYPERPARAMETER USED IN PROBABILITY ESTIMATION
-    void compute_all_reach_probs(Instance *inst);
+        
+        void compute_all_reach_probs(Instance *inst);
 };
+
+void State::update_reach_probs(float gamma, int total_num_columns)
+{
+    State *parent;
+    float sum_probs, prob;
+    int num_children;
+
+    this->level = this->parents[0]->level + 1;
+    this->overall_reach_prob = 0;
+    //FOR EACH INTERESTING TOPIC
+    for (int i = 0; i < total_num_columns; i++)
+    {
+        //FOR EACH PARENT
+        this->reach_probs[i] = 0; 
+        for(int j = 0; j < this->parents.size(); j++)
+        {
+            parent = this->parents[j];
+            num_children = parent->children.size();
+            sum_probs = 0;
+            //WARNING: THIS CAN BE OPTIMIZED
+            for(int k = 0; k < num_children; k++)
+                sum_probs += exp( gamma * parent->children[k]->similarities[i] / num_children);
+                    
+            prob = exp( gamma * this->similarities[i] / num_children ) / sum_probs;
+            this->reach_probs[i] += prob * parent->reach_probs[i];
+        }                
+        this->overall_reach_prob += this->reach_probs[i];
+    }
+    this->overall_reach_prob /= total_num_columns;
+}
 
 //IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL
 //UNDER THIS CONSIDERATION, A BREADTH-FIRST SEARCH CAN UPDATE ALL PARENTS BEFORE ITS CHILDREN
-void State::update_children_reach_probs(Instance *inst, float gamma)
-{
+void update_descent_reach_probs(State *patriarch, float gamma, int total_num_columns)
+{    
     queue<State*> queue;
-    queue.push(this);
+    queue.push(patriarch);
     State *current;
-    State *parent;
-    float sum_probs, prob;
 
     while( !queue.empty() ){
         //GET THE FIRST STATE FROM THE QUEUE
         current = queue.front();
         queue.pop();
-
         //COMPUTE ITS REACHABILITY PROBABILITIES
-        if( current->level != 0 && current->abs_column_id < 0 )
-        {
-            //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE IN THE SAME LEVEL
-            current->level = current->parents[0]->level + 1;
+        //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE IN THE SAME LEVEL
+        if( current->level != 0 )
+            current->update_reach_probs(gamma, total_num_columns);
 
-            //TEST!
-            printf("Level: %d\nID: %d\n", current->level, current->abs_column_id);
-            printf("Reach Probs\n");
-            
-            current->overall_reach_prob = 0;
-            //FOR EACH INTERESTING TOPIC
-            for (int i = 0; i < inst->total_num_columns; i++)
-            {
-                //FOR EACH PARENT
-                current->reach_probs[i] = 0; 
-                for(int j = 0; j < current->parents.size(); j++)
-                {
-                    parent = current->parents[j];
-                    sum_probs = 0;
-                    //WARNING: THIS CAN BE OPTIMIZED
-                    for(int k = 0; k < parent->children.size(); k++)
-                        sum_probs += exp( gamma * parent->children[k]->similarities_vector[i] / parent->children.size());
-                    
-                    prob = exp( gamma * current->similarities_vector[i] / parent->children.size() ) / sum_probs;
-                    current->reach_probs[i] += prob * parent->reach_probs[i];
-                }
-                //TEST!
-                printf("%.3f ", current->reach_probs[i]);
-                
-                current->overall_reach_prob += current->reach_probs[i];
-            }
-            current->overall_reach_prob /= inst->total_num_columns;
-            //TEST!
-            printf("\nOverall reach prob: %.3f\n\n", current->overall_reach_prob);
-        //COMPUTE ITS DISCOVERY PROBABILITY (WHEN IT IS A LEAF)
-        } else if ( current->abs_column_id >= 0 ){
-
-            //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE IN THE SAME LEVEL
-            current->level = current->parents[0]->level + 1;
-
-            //TEST!
-            printf("Level: %d\nID: %d\n", current->level, current->abs_column_id);
-            printf("Reach Probs\n");
-
-            //FOR EACH PARENT
-            current->discover_prob = 0;
-            for(int j = 0; j < current->parents.size(); j++)
-            {
-                parent = current->parents[j];
-                sum_probs = 0;
-                for(int k = 0; k < parent->children.size(); k++){
-                    sum_probs += exp( gamma * parent->children[k]->similarities_vector[current->abs_column_id] / parent->children.size());
-                    printf("%d %.3f\n", parent->abs_column_id, parent->children[k]->similarities_vector[current->abs_column_id]);
-                }
-                prob = exp( gamma * current->similarities_vector[current->abs_column_id] / parent->children.size() ) / sum_probs;
-                current->discover_prob += prob * parent->reach_probs[current->abs_column_id];
-            }
-            printf("Discover probability: %.3f\n\n", current->discover_prob);
-        }
+        //<TEST!>
+        printf("\nLevel: %d\nID: %d\n", current->level, current->abs_column_id);
+        printf("Reach Probs\n");
+        for (int t = 0; t < total_num_columns; t++)
+            printf("%.3f ", current->reach_probs[t]);
         
+        printf("\nOverall reach prob: %.3f\n", current->overall_reach_prob);
+        if(current->abs_column_id >= 0)
+            printf("Discover probability: %.3f\n", current->reach_probs[current->abs_column_id]);
+        //</TEST!>
 
         //ADD ITS CHILDREN TO THE QUEUE
         for(int i=0; i < current->children.size(); i++ )
             queue.push(current->children[i]);
-        
     }
 
 }
@@ -153,12 +190,12 @@ void State::update_children_reach_probs(Instance *inst, float gamma)
 void Organization::compute_all_reach_probs(Instance *inst){
 
     this->root->level = 0;
-    this->root->overall_reach_prob = 1;
-    this->root->reach_probs = new float(inst->total_num_columns);
+    this->root->overall_reach_prob = 1.0;
+    this->root->reach_probs = new float[inst->total_num_columns];
     for (int i = 0; i < inst->total_num_columns; i++)
         this->root->reach_probs[i] = 1.0;
 
-    this->root->update_children_reach_probs(inst, this->gamma);
+    update_descent_reach_probs(this->root, this->gamma, inst->total_num_columns);
 }
 
 float cossine_similarity(float *vector_1, float *vector_2, int dim){
@@ -180,7 +217,7 @@ float cossine_similarity(float *vector_1, float *vector_2, int dim){
 
 }
 
-//GENERATE THE BASELINE ORGANIZATION
+//GENERATE THE BASELINE ORGANIZATION (OUT OF DATE)
 Organization generate_basic_organization(Instance * inst, float gamma)
 {
 
@@ -192,8 +229,11 @@ Organization generate_basic_organization(Instance * inst, float gamma)
     org.root = new State;
     org.root->sum_vector = new float[inst->embedding_dim]; // VECTOR INITIALIZED WITH ZEROS
     org.root->sample_size = 0;
-    org.root->level = 0;
-    org.root->overall_reach_prob = 1;
+    org.root->domain = new int[inst->total_num_columns];
+    for (int i = 0; i < inst->total_num_columns; i++)
+        org.root->domain[i] = 1;
+    // org.root->level = 0;
+    // org.root->overall_reach_prob = 1;
 
     State *state;
     float aux;
@@ -208,31 +248,35 @@ Organization generate_basic_organization(Instance * inst, float gamma)
         for (int j = 0; j < inst->tables[i]->ncols; j++)
         {
             state = new State;
+
             state->abs_column_id = count;
+            state->domain = new int[inst->total_num_columns];
+            state->domain[count] = 1;
             count++;
+
             state->parents.push_back( org.root );
             state->sum_vector = inst->tables[i]->sum_vectors[j];
-            state->level = 1;
+            // state->level = 1;
             state->sample_size = inst->tables[i]->nrows;
 
-            ratio = org.gamma / inst->total_num_columns;
-            state->discover_prob = exp(ratio);
+            // ratio = org.gamma / inst->total_num_columns;
+            // state->discover_prob = exp(ratio);
 
-            //Estimating the discover probability of a column
-            aux = 0;            
-            for (int k = 0; k < inst->num_tables; k++)
-            {
-                for (int l = 0; l < inst->tables[k]->ncols; l++)
-                {
-                    if ( k == i && l == j ) {
-                        aux += state->discover_prob;
-                    } else {
-                        aux += exp( ratio * cossine_similarity(state->sum_vector, inst->tables[k]->sum_vectors[l], org.embedding_dim ) );
-                    }
-                }
-            }
+            // //Estimating the discover probability of a column
+            // aux = 0;            
+            // for (int k = 0; k < inst->num_tables; k++)
+            // {
+            //     for (int l = 0; l < inst->tables[k]->ncols; l++)
+            //     {
+            //         if ( k == i && l == j ) {
+            //             aux += state->discover_prob;
+            //         } else {
+            //             aux += exp( ratio * cossine_similarity(state->sum_vector, inst->tables[k]->sum_vectors[l], org.embedding_dim ) );
+            //         }
+            //     }
+            // }
 
-            state->discover_prob /= aux;
+            // state->discover_prob /= aux;
             // printf("Discover Similarity T%d-C%d: %.5f\n\n", i, j, state->discover_prob);
 
             //root sum vector incrementation 
@@ -243,6 +287,8 @@ Organization generate_basic_organization(Instance * inst, float gamma)
             org.root->children.push_back(state);   
         }   
     }
+
+    org.compute_all_reach_probs(inst);
 
     return org;
     
@@ -264,8 +310,10 @@ Cluster* init_clusters(Instance * inst)
             state->abs_column_id = id;
             state->sum_vector = inst->tables[i]->sum_vectors[j];
             state->sample_size = inst->tables[i]->nrows;
-            state->similarities_vector = new float[inst->total_num_columns];
+            state->similarities = new float[inst->total_num_columns];
             state->reach_probs = new float[inst->total_num_columns];
+            state->domain = new int[inst->total_num_columns];
+            state->domain[id] = 1;
 
             current = new Cluster;
             current->state = state;
@@ -305,18 +353,18 @@ float** init_dist_matrix(Cluster* active_clusters, int total_num_columns, int em
         for(int j = i+1; j < total_num_columns; j++)
         {
             similarity = cossine_similarity(cluster_i->state->sum_vector, cluster_j->state->sum_vector, embedding_dim);
-            cluster_i->state->similarities_vector[ cluster_j->state->abs_column_id ] = similarity;
-            cluster_j->state->similarities_vector[ cluster_i->state->abs_column_id ] = similarity;
+            cluster_i->state->similarities[ cluster_j->state->abs_column_id ] = similarity;
+            cluster_j->state->similarities[ cluster_i->state->abs_column_id ] = similarity;
 
             dist_matrix[i][j] = 1 - similarity;
             dist_matrix[j][i] = dist_matrix[i][j];
             cluster_j = cluster_j->next;
         }
-        cluster_i->state->similarities_vector[ cluster_i->state->abs_column_id ] = 1.0;
+        cluster_i->state->similarities[ cluster_i->state->abs_column_id ] = 1.0;
 
         printf("ID: %d\n", cluster_i->state->abs_column_id);
         for (int z = 0; z < total_num_columns; z++)
-            printf("%.2f ", cluster_i->state->similarities_vector[z]);
+            printf("%.2f ", cluster_i->state->similarities[z]);
         printf("\n\n");
 
         cluster_i = cluster_i->next;
@@ -354,14 +402,14 @@ Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, Ins
     int table_id;
     int col_id;
     float *sum_vector_i;
-    new_state->similarities_vector = new float[inst->total_num_columns];    
+    new_state->similarities = new float[inst->total_num_columns];    
 
     for (int i = 0; i < inst->total_num_columns; i++)
     {
         table_id = inst->map[i][0];
         col_id = inst->map[i][1];
         sum_vector_i = inst->tables[table_id]->sum_vectors[col_id];
-        new_state->similarities_vector[i] = cossine_similarity(new_state->sum_vector, sum_vector_i, inst->embedding_dim);
+        new_state->similarities[i] = cossine_similarity(new_state->sum_vector, sum_vector_i, inst->embedding_dim);
         
     }
 
@@ -373,6 +421,11 @@ Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, Ins
 
     state_1->parents.push_back(new_state);
     state_2->parents.push_back(new_state);
+
+    new_state->domain = new int[inst->total_num_columns];
+    for (int i = 0; i < inst->total_num_columns; i++)
+        new_state->domain[i] = state_1->domain[i] | state_2->domain[i];
+    
 
     //CREATE A NEW CLUSTER CONTAINING THE NEW STATE
     Cluster *new_cluster = new Cluster;
