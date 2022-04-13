@@ -41,6 +41,7 @@ class State
         float *similarities; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL
         int *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
         int abs_column_id= -1; //ABSOLUTE COLUMN ID (ONLY FOR LEAF NODES)
+        int update_id = -1; //ID OF LAST reach_probs UPDATE. IT'S USED TO AVOID RECOMPUTATIONS IN THE DAG
 
         void update_reach_probs(float gamma, int total_num_columns);
 
@@ -96,25 +97,11 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     this->overall_reach_prob /= total_num_columns;
 }
 
-void update_ancestry_domain(State *descendant, int total_num_columns)
-{
-    queue<State*> queue;
-    queue.push(descendant);
-    State *current;
-
-    while( !queue.empty() ){
-        //GET THE FIRST STATE FROM THE QUEUE
-        current = queue.front();
-        queue.pop();
-        
-    }
-}
-
 //IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL
 //UNDER THIS CONSIDERATION, A BREADTH-FIRST SEARCH CAN UPDATE ALL PARENTS BEFORE ITS CHILDREN
-void update_descent_reach_probs(State *patriarch, float gamma, int total_num_columns)
+void update_descendants(State *patriarch, float gamma, int total_num_columns, int update_id)
 {    
-    queue<State*> queue;
+    queue<State*> queue; //QUEUE USED IN THE BREADTH-FIRST SEARCH
     queue.push(patriarch);
     State *current;
 
@@ -122,25 +109,83 @@ void update_descent_reach_probs(State *patriarch, float gamma, int total_num_col
         //GET THE FIRST STATE FROM THE QUEUE
         current = queue.front();
         queue.pop();
-        //COMPUTE ITS REACHABILITY PROBABILITIES
-        //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE IN THE SAME LEVEL
-        if( current != patriarch )
-            current->update_reach_probs(gamma, total_num_columns);
+        //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN UPDATED
+        if( current->update_id != update_id )
+        {
+            //COMPUTE ITS REACHABILITY PROBABILITIES
+            //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE IN THE SAME LEVEL
+            if( current != patriarch )
+                current->update_reach_probs(gamma, total_num_columns);
 
-        //<TEST!>
-        printf("\nLevel: %d\nID: %d\n", current->level, current->abs_column_id);
-        printf("Reach Probs\n");
-        for (int t = 0; t < total_num_columns; t++)
-            printf("%.3f ", current->reach_probs[t]);
+            //<TEST!>
+            printf("\nLevel: %d\nID: %d\n", current->level, current->abs_column_id);
+            printf("Reach Probs\n");
+            for (int t = 0; t < total_num_columns; t++)
+                printf("%.3f ", current->reach_probs[t]);
+            
+            printf("\nOverall reach prob: %.3f\n", current->overall_reach_prob);
+            if(current->abs_column_id >= 0)
+                printf("Discover probability: %.3f\n", current->reach_probs[current->abs_column_id]);
+            //</TEST!>
+
+            //ADD ITS CHILDREN TO THE QUEUE
+            for(int i=0; i < current->children.size(); i++ )
+                queue.push(current->children[i]);
+
+            current->update_id = update_id;
+        }
+    }
+}
+
+void update_ancestors(State *descendant, Instance *inst, float gamma, int update_id)
+{
+    queue<State*> outdated_patriarchs; //PATRIARCHS WHOSE DESCENDANTS NEED TO UPDATE REACH_PROBS 
+    queue<State*> queue; //QUEUE USED IN THE BREADTH-FIRST SEARCH
+    queue.push(descendant);
+    State *current;
+    int table_id, col_id;
+    int has_changed = 1;
+
+    while( !queue.empty() ){
+        //GET THE FIRST STATE FROM THE QUEUE 
+        current = queue.front();
+        queue.pop();
+
+        if( current != descendant )
+        {
+            has_changed = 0;
+            //CHECK WHICH TOPICS NEED TO BE ADDED IN current's DOMAIN
+            for(int i = 0; i < inst->total_num_columns; i++)
+            {
+                if(descendant->domain[i] == 1 && current->domain[i] == 0)
+                {
+                    has_changed = 1;
+                    current->domain[i] = 1;
+                    table_id = inst->map[i][0];
+                    col_id = inst->map[i][1];
+                    for(int d = 0; d < inst->embedding_dim; d++)
+                        current->sum_vector[d] += inst->tables[table_id]->sum_vectors[col_id][d];
+                }
+            }
+        }
+
+        if( has_changed == 1 )
+        {
+            //ITS PARENTS NEED TO BE VERIFIED
+            for(int i = 0; i < current->parents.size(); i++)
+                queue.push(current->parents[i]);
+        } else {
+            //ITS SIBILINGS NEED UPDATE THIER reach_probs
+            outdated_patriarchs.push(current);
+        }
         
-        printf("\nOverall reach prob: %.3f\n", current->overall_reach_prob);
-        if(current->abs_column_id >= 0)
-            printf("Discover probability: %.3f\n", current->reach_probs[current->abs_column_id]);
-        //</TEST!>
+    }
 
-        //ADD ITS CHILDREN TO THE QUEUE
-        for(int i=0; i < current->children.size(); i++ )
-            queue.push(current->children[i]);
+    while( !outdated_patriarchs.empty() )
+    {
+        current = outdated_patriarchs.front();
+        outdated_patriarchs.pop();
+        update_descendants(current, gamma, inst->total_num_columns, update_id);
     }
 
 }
@@ -153,7 +198,7 @@ void Organization::compute_all_reach_probs(Instance *inst){
     for (int i = 0; i < inst->total_num_columns; i++)
         this->root->reach_probs[i] = 1.0;
 
-    update_descent_reach_probs(this->root, this->gamma, inst->total_num_columns);
+    update_descendants(this->root, this->gamma, inst->total_num_columns, 0);
 }
 
 float cossine_similarity(float *vector_1, float *vector_2, int dim){
