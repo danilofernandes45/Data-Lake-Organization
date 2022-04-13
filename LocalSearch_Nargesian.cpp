@@ -46,62 +46,6 @@ class State
 
 };
 
-// class Node
-// {
-//     public:
-//         State state;
-//         Node *next = NULL;
-// };
-
-// class Queue
-// {
-//     private:
-//         Node *head = NULL;
-//         Node *tail = NULL;
-//     public:
-//         void push(State *state);
-//         void pop();
-//         State* front();
-//         int empty();
-// };
-
-// void Queue::push(State *state)
-// {
-//     Node *new_node = new Node;
-//     new_node->state = *state;
-
-//     if(this->head == NULL){
-//         this->head = new_node;
-//         this->tail = new_node;
-//     } else {
-//         this->tail->next = new_node;
-//         this->tail = new_node;
-//     }
-// }
-
-// void Queue::pop()
-// {
-//     if(this->head != NULL){
-//         this->head = this->head->next;
-//         if(this->head == NULL)
-//             this->tail = NULL;
-//     }
-// }
-
-// State* Queue::front()
-// {
-//     if(this->head == NULL)
-//         return NULL;
-//     return &this->head->state;
-// }
-
-// int Queue::empty()
-// {
-//     if(this->head == NULL)
-//         return 1;
-//     return 0;
-// }
-
 class Cluster
 {
     public:
@@ -152,6 +96,20 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     this->overall_reach_prob /= total_num_columns;
 }
 
+void update_ancestry_domain(State *descendant, int total_num_columns)
+{
+    queue<State*> queue;
+    queue.push(descendant);
+    State *current;
+
+    while( !queue.empty() ){
+        //GET THE FIRST STATE FROM THE QUEUE
+        current = queue.front();
+        queue.pop();
+        
+    }
+}
+
 //IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL
 //UNDER THIS CONSIDERATION, A BREADTH-FIRST SEARCH CAN UPDATE ALL PARENTS BEFORE ITS CHILDREN
 void update_descent_reach_probs(State *patriarch, float gamma, int total_num_columns)
@@ -166,7 +124,7 @@ void update_descent_reach_probs(State *patriarch, float gamma, int total_num_col
         queue.pop();
         //COMPUTE ITS REACHABILITY PROBABILITIES
         //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE IN THE SAME LEVEL
-        if( current->level != 0 )
+        if( current != patriarch )
             current->update_reach_probs(gamma, total_num_columns);
 
         //<TEST!>
