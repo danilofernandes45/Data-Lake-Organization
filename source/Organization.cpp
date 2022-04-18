@@ -1,36 +1,43 @@
 #include "Organization.hpp"
 
-void Organization::update_effectiveness(Instance *inst)
+void Organization::update_effectiveness()
 {
     State *leaf;
     int table_id;
-    float *tables_discover_probs = new float[inst->num_tables];
+    int last_level = this->all_states.size() - 1;
+    float *tables_discover_probs = new float[this->instance->num_tables];
 
-    for (int i = 0; i < inst->num_tables; i++)
+    for (int i = 0; i < this->instance->num_tables; i++)
         tables_discover_probs[i] = 1.0;
     
-    for (int i = 0; i < this->all_states[-1].size(); i++)
+    cout << last_level << "\n";
+    for (int i = 0; i < this->all_states[last_level].size(); i++)
     {
-        leaf = this->all_states[-1][i];
-        table_id = inst->map[leaf->abs_column_id][0];
+        leaf = this->all_states[last_level][i];
+        table_id = this->instance->map[leaf->abs_column_id][0];
         tables_discover_probs[table_id] *= ( 1 - leaf->reach_probs[leaf->abs_column_id] );
+        cout << ( 1 - leaf->reach_probs[leaf->abs_column_id] ) << " ";
     }
+    cout << "\n";
     this->effectiveness = 0.0;
-    for (int i = 0; i < inst->num_tables; i++)
+    for (int i = 0; i < this->instance->num_tables; i++){
         this->effectiveness += 1 - tables_discover_probs[i];
+        cout << 1 - tables_discover_probs[i] << " ";
+    }
+    cout << "\n";
 
-    this->effectiveness /= inst->num_tables;    
+    this->effectiveness /= this->instance->num_tables; 
 }
 
-void Organization::compute_all_reach_probs(Instance *inst)
+void Organization::compute_all_reach_probs()
 {
     this->root->level = 0;
     this->root->overall_reach_prob = 1.0;
-    this->root->reach_probs = new float[inst->total_num_columns];
-    for (int i = 0; i < inst->total_num_columns; i++)
+    this->root->reach_probs = new float[this->instance->total_num_columns];
+    for (int i = 0; i < this->instance->total_num_columns; i++)
         this->root->reach_probs[i] = 1.0;
 
-    Organization::update_descendants(this->root, this->gamma, inst->total_num_columns, 0);
+    Organization::update_descendants(this->root, this->gamma, this->instance->total_num_columns, 0);
 }
 
 //INITIALIZE all_states, CONSIDERING THAT ALL STATES HAVE ONLY ONE PARENT
@@ -62,18 +69,19 @@ void Organization::init_all_states()
     this->all_states.push_back(*states_level);    
 }
 
-Organization* Organization::copy(int total_num_columns, int embedding_dim)
+Organization* Organization::copy()
 {
     Organization *copy = new Organization;
-    copy->embedding_dim = this->embedding_dim;
+    copy->instance = this->instance;
     copy->gamma = this->gamma;
+    copy->effectiveness = this->effectiveness;
 
     State *copied_state;
     for(int i = 0; i < this->all_states.size(); i++)
     {
         vector<State*> states;
         for (int j = 0; j < this->all_states[i].size(); j++){
-            copied_state = this->all_states[i][j]->copy(total_num_columns, embedding_dim);
+            copied_state = this->all_states[i][j]->copy(this->instance->total_num_columns, this->instance->embedding_dim);
             //ADD TRANSITIONS PARENT-CHILD
             //UNDER CONSIDERATION THAT ALL PARENTS ARE IN PREVIOUS LEVEL
             for (int k = 0; k < this->all_states[i][j]->parents.size(); k++)
@@ -96,7 +104,7 @@ Organization* Organization::copy(int total_num_columns, int embedding_dim)
     return copy; 
 }
 
-void Organization::delete_parent(int level, int level_id, int total_num_columns, int update_id)
+void Organization::delete_parent(int level, int level_id, int update_id)
 {
     State *current, *parent;
     queue<State*> outdated_states;
@@ -124,24 +132,26 @@ void Organization::delete_parent(int level, int level_id, int total_num_columns,
                 }
             }
         }
-        current->parents = new_parents; 
+        current->parents = new_parents;
     }
     while ( !outdated_states.empty() )
     {
         current = outdated_states.front();
         outdated_states.pop();
-        Organization::update_descendants(current, this->gamma, total_num_columns, update_id);
-    }  
+        Organization::update_descendants(current, this->gamma, this->instance->total_num_columns, update_id);
+    } 
+    this->all_states.erase(all_states.begin() + level - 1);
+    this->update_effectiveness();
 }
 
-void Organization::add_parent(int level, int level_id, Instance *inst, int gamma, int update_id)
+void Organization::add_parent(int level, int level_id, int update_id)
 {
     State *current = this->all_states[level][level_id];
     int i = this->all_states[level-1].size() - 1;
     int flag = 1;
     for( ; i >= 0; i--)
     {
-        for (int j = 0; j < current->parents.size(); i++)
+        for (int j = 0; j < current->parents.size(); j++)
         {
             if( this->all_states[level-1][i]->abs_column_id == current->parents[j]->abs_column_id ){
                 flag = 0;
@@ -153,7 +163,8 @@ void Organization::add_parent(int level, int level_id, Instance *inst, int gamma
             break;
         } 
     }
-    Organization::update_ancestors(current, inst, gamma, update_id);
+    Organization::update_ancestors(current, this->instance, this->gamma, update_id);
+    this->update_effectiveness();
 }
 
 //IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL
@@ -177,14 +188,14 @@ void Organization::update_descendants(State *patriarch, float gamma, int total_n
                 current->update_reach_probs(gamma, total_num_columns);
 
             //<TEST!>
-            printf("\nLevel: %d\nID: %d\n", current->level, current->abs_column_id);
-            printf("Reach Probs\n");
-            for (int t = 0; t < total_num_columns; t++)
-                printf("%.3f ", current->reach_probs[t]);
+            // printf("\nLevel: %d\nID: %d\n", current->level, current->abs_column_id);
+            // printf("Reach Probs\n");
+            // for (int t = 0; t < total_num_columns; t++)
+            //     printf("%.3f ", current->reach_probs[t]);
             
-            printf("\nOverall reach prob: %.3f\n", current->overall_reach_prob);
-            if(current->abs_column_id >= 0)
-                printf("Discover probability: %.3f\n", current->reach_probs[current->abs_column_id]);
+            // printf("\nOverall reach prob: %.3f\n", current->overall_reach_prob);
+            // if(current->abs_column_id >= 0)
+            //     printf("Discover probability: %.3f\n", current->reach_probs[current->abs_column_id]);
             //</TEST!>
 
             //ADD ITS CHILDREN TO THE QUEUE
@@ -244,7 +255,7 @@ void Organization::update_ancestors(State *descendant, Instance *inst, float gam
     {
         current = outdated_patriarchs.front();
         outdated_patriarchs.pop();
-        update_descendants(current, gamma, inst->total_num_columns, update_id);
+        Organization::update_descendants(current, gamma, inst->total_num_columns, update_id);
     }
 
 }
@@ -255,7 +266,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
 
     //Organizatio setup
     Organization *org = new Organization;
-    org->embedding_dim = inst->embedding_dim;
+    org->instance = inst;
     org->gamma = gamma;
     //Root node creation
     org->root = new State;
@@ -295,9 +306,9 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
             org->root->children.push_back(state);   
         }   
     }
-    org->compute_all_reach_probs(inst);
+    org->compute_all_reach_probs();
     org->init_all_states();
-    org->update_effectiveness(inst);
+    org->update_effectiveness();
     return org;
 }
 
@@ -309,7 +320,7 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
 {
     //Organization setup
     Organization *org = new Organization;
-    org->embedding_dim = inst->embedding_dim;
+    org->instance = inst;
     org->gamma = gamma;
 
     Cluster* active_clusters = Cluster::init_clusters(inst); // CHAINED LIST OF CLUSTERS AVAILABLE TO BE ADDED TO NN CHAIN
@@ -406,8 +417,8 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     }
 
     org->root = active_clusters->state;
-    org->compute_all_reach_probs(inst);
+    org->compute_all_reach_probs();
     org->init_all_states();
-    org->update_effectiveness(inst);
+    org->update_effectiveness();
     return org;
 }

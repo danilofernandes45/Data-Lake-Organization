@@ -87,10 +87,12 @@ float** Cluster::init_dist_matrix(Cluster* active_clusters, int total_num_column
         }
         cluster_i->state->similarities[ cluster_i->state->abs_column_id ] = 1.0;
 
-        printf("ID: %d\n", cluster_i->state->abs_column_id);
-        for (int z = 0; z < total_num_columns; z++)
-            printf("%.2f ", cluster_i->state->similarities[z]);
-        printf("\n\n");
+        // <TEST>
+        // printf("ID: %d\n", cluster_i->state->abs_column_id);
+        // for (int z = 0; z < total_num_columns; z++)
+        //     printf("%.2f ", cluster_i->state->similarities[z]);
+        // printf("\n\n");
+        // </TEST>
 
         cluster_i = cluster_i->next;
     }

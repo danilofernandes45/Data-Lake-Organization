@@ -20,7 +20,8 @@ CC_FLAGS=-c         \
          -W         \
          -Wall      \
          -ansi      \
-         -pedantic
+         -pedantic	\
+		 -std=c++11
 
 # Command used at clean target
 RM = rm -rf
