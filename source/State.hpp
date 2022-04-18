@@ -22,6 +22,8 @@ class State
 
         void update_reach_probs(float gamma, int total_num_columns);
         State* copy(int total_num_columns, int embedding_dim);
+
+        static bool compare(const State *state_1, const State *state_2);
 };
 
 #endif

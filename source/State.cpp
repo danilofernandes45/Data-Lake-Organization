@@ -1,5 +1,9 @@
 #include "State.hpp"
 
+bool State::compare(const State *state_1, const State *state_2) {
+    return state_1->overall_reach_prob < state_2->overall_reach_prob; 
+}
+
 State* State::copy(int total_num_columns, int embedding_dim)
 {
     State *copy = new State;

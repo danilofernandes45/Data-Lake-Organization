@@ -1,5 +1,27 @@
 #include "Organization.hpp"
 
+void Organization::update_effectiveness(Instance *inst)
+{
+    State *leaf;
+    int table_id;
+    float *tables_discover_probs = new float[inst->num_tables];
+
+    for (int i = 0; i < inst->num_tables; i++)
+        tables_discover_probs[i] = 1.0;
+    
+    for (int i = 0; i < this->all_states[-1].size(); i++)
+    {
+        leaf = this->all_states[-1][i];
+        table_id = inst->map[leaf->abs_column_id][0];
+        tables_discover_probs[table_id] *= ( 1 - leaf->reach_probs[leaf->abs_column_id] );
+    }
+    this->effectiveness = 0.0;
+    for (int i = 0; i < inst->num_tables; i++)
+        this->effectiveness += 1 - tables_discover_probs[i];
+
+    this->effectiveness /= inst->num_tables;    
+}
+
 void Organization::compute_all_reach_probs(Instance *inst)
 {
     this->root->level = 0;
@@ -28,6 +50,7 @@ void Organization::init_all_states()
             queue.push(current->children[i]);
         //ADD states_level IN all_states, IF IT'S NECESSARY
         if( current_level < current->level ){
+            sort( states_level->begin(), states_level->end(), State::compare );
             this->all_states.push_back(*states_level);
             states_level = new vector<State*>;
             current_level++;
@@ -35,6 +58,7 @@ void Organization::init_all_states()
         //ADD CURRENT STATE IN states_level
         states_level->push_back(current);           
     }
+    sort( states_level->begin(), states_level->end(), State::compare );
     this->all_states.push_back(*states_level);    
 }
 
@@ -70,6 +94,66 @@ Organization* Organization::copy(int total_num_columns, int embedding_dim)
     copy->root = copy->all_states[0][0];
 
     return copy; 
+}
+
+void Organization::delete_parent(int level, int level_id, int total_num_columns, int update_id)
+{
+    State *current, *parent;
+    queue<State*> outdated_states;
+    vector<State*> new_parents;
+    int flag;
+    for (int i = 0; i < this->all_states[level].size(); i++)
+    {
+        current = this->all_states[level][i];
+        for (int j = 0; j < current->parents.size(); j++)
+        {
+            parent = current->parents[j];
+            for (int k = 0; k < parent->parents.size(); k++)
+            {
+                flag = 1;
+                for (int l = 0; l < new_parents.size(); l++)
+                {
+                    if( parent->parents[k]->abs_column_id == new_parents[l]->abs_column_id ){
+                        flag = 0;
+                        break;
+                    }
+                }
+                if( flag ){
+                    new_parents.push_back(parent->parents[k]);
+                    outdated_states.push(parent->parents[k]);
+                }
+            }
+        }
+        current->parents = new_parents; 
+    }
+    while ( !outdated_states.empty() )
+    {
+        current = outdated_states.front();
+        outdated_states.pop();
+        Organization::update_descendants(current, this->gamma, total_num_columns, update_id);
+    }  
+}
+
+void Organization::add_parent(int level, int level_id, Instance *inst, int gamma, int update_id)
+{
+    State *current = this->all_states[level][level_id];
+    int i = this->all_states[level-1].size() - 1;
+    int flag = 1;
+    for( ; i >= 0; i--)
+    {
+        for (int j = 0; j < current->parents.size(); i++)
+        {
+            if( this->all_states[level-1][i]->abs_column_id == current->parents[j]->abs_column_id ){
+                flag = 0;
+                break;
+            }
+        }
+        if( flag ){
+            current->parents.push_back(this->all_states[level-1][i]);
+            break;
+        } 
+    }
+    Organization::update_ancestors(current, inst, gamma, update_id);
 }
 
 //IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL
@@ -213,7 +297,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
     }
     org->compute_all_reach_probs(inst);
     org->init_all_states();
-
+    org->update_effectiveness(inst);
     return org;
 }
 
@@ -324,5 +408,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     org->root = active_clusters->state;
     org->compute_all_reach_probs(inst);
     org->init_all_states();
+    org->update_effectiveness(inst);
     return org;
 }
