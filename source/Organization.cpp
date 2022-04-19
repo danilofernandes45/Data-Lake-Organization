@@ -125,7 +125,8 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     State *current, *parent;
     queue<State*> outdated_states;
     vector<State*> new_parents;
-    int flag;
+    vector<State*> *grandpa_children;
+    int flag, count;
     for (int i = 0; i < this->all_states[level].size(); i++)
     {
         current = this->all_states[level][i];
@@ -135,16 +136,24 @@ void Organization::delete_parent(int level, int level_id, int update_id)
             for (int k = 0; k < parent->parents.size(); k++)
             {
                 //VERIFY IF THE CURRENT GRANDPARENT WAS ALREADY ADDED TO BE A PARENT 
-                flag = 1;
-                for (int l = 0; l < new_parents.size(); l++)
-                {
-                    if( parent->parents[k]->abs_column_id == new_parents[l]->abs_column_id ){
-                        flag = 0;
-                        break;
-                    }
-                }
-                if( flag ){
-                    remove(parent->parents[k]->children.begin(), parent->parents[k]->children.end(), parent);
+                // flag = 1;
+                // for (int l = 0; l < new_parents.size(); l++)
+                // {
+                //     if( parent->parents[k]->abs_column_id == new_parents[l]->abs_column_id ){
+                //         flag = 0;
+                //         break;
+                //     }
+                // }
+                if( find(new_parents.begin(), new_parents.end(), parent->parents[k]) == new_parents.end() ){
+                    
+                    grandpa_children = &parent->parents[k]->children;
+                    grandpa_children->erase( find(grandpa_children->begin(), grandpa_children->end(), parent) );
+                    // count = 0;
+                    // while( parent->parents[k]->children[count]->abs_column_id != parent->abs_column_id )
+                    //     count++;
+                    // if( count < parent->parents[k]->children.size() )
+                    //     parent->parents[k]->children.erase(parent->parents[k]->children.begin() + count);
+                    
                     parent->parents[k]->children.push_back(current);
                     new_parents.push_back(parent->parents[k]);
                     outdated_states.push(parent->parents[k]);
@@ -159,6 +168,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
         outdated_states.pop();
         Organization::update_descendants(current, this->gamma, this->instance->total_num_columns, update_id);
     }
+    //UPDATE all_states
     // AVOID LOST LEAF STATES
     for(int i=0; i < this->all_states[level-1].size(); i++)
     {
@@ -185,6 +195,7 @@ void Organization::add_parent(int level, int level_id, int update_id)
         }
         if( flag ){
             current->parents.push_back(this->all_states[level-1][i]);
+            this->all_states[level-1][i]->children.push_back(current);
             break;
         } 
     }
