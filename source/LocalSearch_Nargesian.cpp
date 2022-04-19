@@ -17,10 +17,10 @@ Organization* modify_organization(Organization *org, int level, int level_id, in
     Organization *new_org_del = org->copy();
 
     new_org_add->add_parent(level, level_id, update_id);
-    cout << "ADD: " << new_org_add->effectiveness << "\n";
+    cout << "ADD: " << new_org_add->effectiveness << "\n\n";
 
     new_org_del->delete_parent(level, level_id, update_id);
-    cout << "REMOVE: " << new_org_del->effectiveness << "\n";
+    cout << "REMOVE: " << new_org_del->effectiveness << "\n\n";
 
     if(new_org_add->effectiveness > new_org_del->effectiveness)
         return new_org_add;
@@ -38,7 +38,7 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
     mt19937 generator(rand_dev());
     uniform_real_distribution<float> distribution(0.0, 1.0);
 
-    cout << "\nFirst Effectiveness: " << org->effectiveness << "\n";
+    cout << "First Effectiveness: " << org->effectiveness << "\n\n";
 
     while (count < plateau_iters && org->all_states.size() >= 3)
     {

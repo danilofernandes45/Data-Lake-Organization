@@ -11,6 +11,7 @@ class Organization
         State *root = NULL;
         float gamma; // HYPERPARAMETER USED IN PROBABILITY ESTIMATION
         vector< vector<State*> > all_states;
+        vector<State*> leaves;
         float effectiveness;
         
         void compute_all_reach_probs();

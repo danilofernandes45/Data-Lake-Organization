@@ -4,21 +4,20 @@ void Organization::update_effectiveness()
 {
     State *leaf;
     int table_id;
-    int last_level = this->all_states.size() - 1;
     float *tables_discover_probs = new float[this->instance->num_tables];
 
     for (int i = 0; i < this->instance->num_tables; i++)
         tables_discover_probs[i] = 1.0;
     
-    cout << last_level << "\n";
-    for (int i = 0; i < this->all_states[last_level].size(); i++)
-    {
-        leaf = this->all_states[last_level][i];
+    cout << "Columns Discover Probs: ";
+    for (int i = 0; i < this->leaves.size(); i++)
+    {   
+        leaf = this->leaves[i];
         table_id = this->instance->map[leaf->abs_column_id][0];
         tables_discover_probs[table_id] *= ( 1 - leaf->reach_probs[leaf->abs_column_id] );
-        cout << ( 1 - leaf->reach_probs[leaf->abs_column_id] ) << " ";
+        cout << leaf->reach_probs[leaf->abs_column_id] << " ";
     }
-    cout << "\n";
+    cout << "\nTables Discover Probs: ";
     this->effectiveness = 0.0;
     for (int i = 0; i < this->instance->num_tables; i++){
         this->effectiveness += 1 - tables_discover_probs[i];
@@ -52,11 +51,20 @@ void Organization::init_all_states()
         //REMOVE FROM QUEUE
         current = queue.front();
         queue.pop();
-        //ADD ITS CHILDREN IN THE QUEUE
-        for (int i = 0; i < current->children.size(); i++)
-            queue.push(current->children[i]);
+        if( current->children.size() > 0) {
+            //ADD ITS CHILDREN IN THE QUEUE
+            for (int i = 0; i < current->children.size(); i++)
+                queue.push(current->children[i]);
+        } else {
+            this->leaves.push_back(current);
+        }
         //ADD states_level IN all_states, IF IT'S NECESSARY
         if( current_level < current->level ){
+
+            for (int i = 0; i < states_level->size(); i++)
+                cout << (*states_level)[i]->abs_column_id << " ";
+            cout << "\n";
+
             sort( states_level->begin(), states_level->end(), State::compare );
             this->all_states.push_back(*states_level);
             states_level = new vector<State*>;
@@ -65,8 +73,14 @@ void Organization::init_all_states()
         //ADD CURRENT STATE IN states_level
         states_level->push_back(current);           
     }
+
+    for (int i = 0; i < states_level->size(); i++)
+        cout << (*states_level)[i]->abs_column_id << " ";
+    cout << "\n";
+
     sort( states_level->begin(), states_level->end(), State::compare );
-    this->all_states.push_back(*states_level);    
+    this->all_states.push_back(*states_level);
+      
 }
 
 Organization* Organization::copy()
@@ -96,6 +110,8 @@ Organization* Organization::copy()
                 }   
             }
             states.push_back( copied_state );
+            if( this->all_states[i][j]->children.size() == 0 )
+                copy->leaves.push_back(copied_state);
         }
         copy->all_states.push_back(states);
     }
@@ -118,6 +134,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
             parent = current->parents[j];
             for (int k = 0; k < parent->parents.size(); k++)
             {
+                //VERIFY IF THE CURRENT GRANDPARENT WAS ALREADY ADDED TO BE A PARENT 
                 flag = 1;
                 for (int l = 0; l < new_parents.size(); l++)
                 {
@@ -127,6 +144,8 @@ void Organization::delete_parent(int level, int level_id, int update_id)
                     }
                 }
                 if( flag ){
+                    remove(parent->parents[k]->children.begin(), parent->parents[k]->children.end(), parent);
+                    parent->parents[k]->children.push_back(current);
                     new_parents.push_back(parent->parents[k]);
                     outdated_states.push(parent->parents[k]);
                 }
@@ -139,7 +158,13 @@ void Organization::delete_parent(int level, int level_id, int update_id)
         current = outdated_states.front();
         outdated_states.pop();
         Organization::update_descendants(current, this->gamma, this->instance->total_num_columns, update_id);
-    } 
+    }
+    // AVOID LOST LEAF STATES
+    for(int i=0; i < this->all_states[level-1].size(); i++)
+    {
+        if( this->all_states[level-1][i]->children.size() == 0 )
+            this->all_states[level].push_back( this->all_states[level-1][i] );
+    }
     this->all_states.erase(all_states.begin() + level - 1);
     this->update_effectiveness();
 }
@@ -303,7 +328,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
             for (int d = 0; d < inst->embedding_dim; d++)
                 org->root->sum_vector[d] += state->sum_vector[d];
             //Adding the leaf to the organization as child of the root
-            org->root->children.push_back(state);   
+            org->root->children.push_back(state);
         }   
     }
     org->compute_all_reach_probs();

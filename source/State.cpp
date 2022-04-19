@@ -39,6 +39,7 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     float sum_probs, prob;
     int num_children;
 
+    //CONSIDERATION: ALL PARENTS ARE IN THE SAME LEVEL
     this->level = this->parents[0]->level + 1;
     this->overall_reach_prob = 0;
     //FOR EACH INTERESTING TOPIC
@@ -57,7 +58,7 @@ void State::update_reach_probs(float gamma, int total_num_columns)
                     
             prob = exp( gamma * this->similarities[i] / num_children ) / sum_probs;
             this->reach_probs[i] += prob * parent->reach_probs[i];
-        }                
+        }
         this->overall_reach_prob += this->reach_probs[i];
     }
     this->overall_reach_prob /= total_num_columns;
