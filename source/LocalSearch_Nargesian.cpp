@@ -102,10 +102,27 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
 
 int main()
 {
-    Instance * instance = Instance::read_instance();
-    float gamma = 1.0;
+    vector<int> v;
+    //Insert values 1 to 10
+    v.push_back(20);
+    v.push_back(10);
+    v.push_back(30);
+    v.push_back(20);
+    v.push_back(40);
+    v.push_back(20);
+    v.push_back(10);
 
-    Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
-    local_search(org, 5, 0.01);
+    vector<int>::iterator new_end;
+    remove(v.begin(), v.end(), 20);
+
+    for(int i=0;i<v.size(); i++){
+        cout << v[i] << " ";
+    }
+
+    // Instance * instance = Instance::read_instance();
+    // float gamma = 1.0;
+
+    // Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
+    // local_search(org, 5, 0.01);
     return 0;
 }
