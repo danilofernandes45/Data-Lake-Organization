@@ -125,6 +125,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     State *current, *parent;
     queue<State*> outdated_states;
     vector<State*> *new_parents, *grandpa_children;
+    vector<State*>::iterator iter;
     for (int i = 0; i < this->all_states[level].size(); i++)
     {
         current = this->all_states[level][i];
@@ -143,7 +144,9 @@ void Organization::delete_parent(int level, int level_id, int update_id)
                         cout << (*grandpa_children)[t]->abs_column_id << " ";
                     cout << "\n";
 
-                    remove(grandpa_children->begin(), grandpa_children->end(), parent);
+                    iter = find(grandpa_children->begin(), grandpa_children->end(), parent);
+                    if( iter != grandpa_children->end() )
+                        grandpa_children->erase(iter);
 
                     for (int t = 0; t < grandpa_children->size(); t++)
                         cout << (*grandpa_children)[t]->abs_column_id << " ";
