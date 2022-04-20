@@ -13,7 +13,7 @@ void Organization::update_effectiveness()
     for (int i = 0; i < this->leaves.size(); i++)
     {
         leaf = this->leaves[i];
-        cout << leaf->overall_reach_prob << " ";
+        cout << leaf->overall_reach_prob << " (" << leaf->abs_column_id << ") ";
     }
 
     cout << "\nColumns Discover Probs: ";
@@ -22,7 +22,7 @@ void Organization::update_effectiveness()
         leaf = this->leaves[i];
         table_id = this->instance->map[leaf->abs_column_id][0];
         tables_discover_probs[table_id] *= ( 1 - leaf->reach_probs[leaf->abs_column_id] );
-        cout << leaf->reach_probs[leaf->abs_column_id] << " ";
+        cout << leaf->reach_probs[leaf->abs_column_id] << " (" << leaf->abs_column_id << ") ";
     }
     cout << "\nTables Discover Probs: ";
     this->effectiveness = 0.0;
@@ -30,7 +30,7 @@ void Organization::update_effectiveness()
         this->effectiveness += 1 - tables_discover_probs[i];
         cout << 1 - tables_discover_probs[i] << " ";
     }
-    cout << "\n";
+    cout << "\n\n";
 
     this->effectiveness /= this->instance->num_tables; 
 }
@@ -264,6 +264,7 @@ int Organization::update_ancestors(State *descendant, Instance *inst, float gamm
     State *current;
     int table_id, col_id, min_level;
     int has_changed = 1;
+    float *sum_vector_i;
 
     while( !queue.empty() ){
         //GET THE FIRST STATE FROM THE QUEUE 
@@ -290,6 +291,15 @@ int Organization::update_ancestors(State *descendant, Instance *inst, float gamm
 
         if( has_changed == 1 )
         {
+            //UPDATE SIMILARITIES
+            for (int i = 0; i < inst->total_num_columns; i++)
+            {
+                table_id = inst->map[i][0];
+                col_id = inst->map[i][1];
+                sum_vector_i = inst->tables[table_id]->sum_vectors[col_id];
+                current->similarities[i] = cossine_similarity(current->sum_vector, sum_vector_i, inst->embedding_dim);
+            }
+            
             //ITS PARENTS NEED TO BE VERIFIED
             for(int i = 0; i < current->parents.size(); i++)
                 queue.push(current->parents[i]);

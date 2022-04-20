@@ -3,6 +3,7 @@
 
 #include "State.hpp"
 #include "Instance.hpp"
+#include "utils.hpp"
 
 class Cluster
 {

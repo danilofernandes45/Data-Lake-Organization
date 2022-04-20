@@ -28,7 +28,7 @@ void print_organization(Organization *org)
         }
         
     }
-    
+    cout << "\n";
 }
 
 Organization* modify_organization(Organization *org, int level, int level_id, int update_id)
@@ -108,6 +108,6 @@ int main()
     float gamma = 1.0;
 
     Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
-    local_search(org, 2, 0.01);
+    local_search(org, 3, 0.01);
     return 0;
 }
