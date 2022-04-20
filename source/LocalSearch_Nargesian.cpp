@@ -36,6 +36,9 @@ Organization* modify_organization(Organization *org, int level, int level_id, in
     Organization *new_org_add = org->copy();
     Organization *new_org_del = org->copy();
 
+    cout << "ORIGINAL: " << org->effectiveness << "\n\n";
+    print_organization(org);
+
     new_org_add->add_parent(level, level_id, update_id);
     cout << "ADD: " << new_org_add->effectiveness << "\n\n";
     print_organization(new_org_add);
@@ -60,16 +63,15 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
     mt19937 generator(rand_dev());
     uniform_real_distribution<float> distribution(0.0, 1.0);
 
-    print_organization(org);
-
-    cout << "First Effectiveness: " << org->effectiveness << "\n\n";
+    // print_organization(org);
+    // cout << "First Effectiveness: " << org->effectiveness << "\n\n";
 
     while (count < plateau_iters && org->all_states.size() >= 3)
     {
         new_org = modify_organization(org, level, level_id, update_id);
         increse_perc = ( new_org->effectiveness - org->effectiveness ) / org->effectiveness;
 
-        cout << "\nEffectiveness: " << new_org->effectiveness << "\n";
+        // cout << "\nEffectiveness: " << new_org->effectiveness << "\n";
 
         if( increse_perc >= 0 ) {
             if( increse_perc  < eps )
@@ -102,28 +104,10 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
 
 int main()
 {
-    // vector<int> v;
-    // //Insert values 1 to 10
-    // v.push_back(20);
-    // v.push_back(10);
-    // v.push_back(30);
-    // v.push_back(20);
-    // v.push_back(40);
-    // v.push_back(20);
-    // v.push_back(10);
-
-    // vector<int>::iterator pos = find(v.begin(), v.end(), 20);
-    // if( pos != v.end() )
-    //     v.erase(pos);
-
-    // for(int i=0;i<v.size(); i++){
-    //     cout << v[i] << " ";
-    // }
-
     Instance * instance = Instance::read_instance();
     float gamma = 1.0;
 
     Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
-    local_search(org, 5, 0.01);
+    local_search(org, 2, 0.01);
     return 0;
 }

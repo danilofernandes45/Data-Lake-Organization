@@ -8,8 +8,15 @@ void Organization::update_effectiveness()
 
     for (int i = 0; i < this->instance->num_tables; i++)
         tables_discover_probs[i] = 1.0;
-    
-    cout << "Columns Discover Probs: ";
+
+    cout << "Columns Overall Reach Probs: ";
+    for (int i = 0; i < this->leaves.size(); i++)
+    {
+        leaf = this->leaves[i];
+        cout << leaf->overall_reach_prob << " ";
+    }
+
+    cout << "\nColumns Discover Probs: ";
     for (int i = 0; i < this->leaves.size(); i++)
     {   
         leaf = this->leaves[i];
@@ -61,9 +68,9 @@ void Organization::init_all_states()
         //ADD states_level IN all_states, IF IT'S NECESSARY
         if( current_level < current->level ){
 
-            for (int i = 0; i < states_level->size(); i++)
-                cout << (*states_level)[i]->abs_column_id << " ";
-            cout << "\n";
+            // for (int i = 0; i < states_level->size(); i++)
+            //     cout << (*states_level)[i]->abs_column_id << " ";
+            // cout << "\n";
 
             sort( states_level->begin(), states_level->end(), State::compare );
             this->all_states.push_back(*states_level);
@@ -74,13 +81,20 @@ void Organization::init_all_states()
         states_level->push_back(current);           
     }
 
-    for (int i = 0; i < states_level->size(); i++)
-        cout << (*states_level)[i]->abs_column_id << " ";
-    cout << "\n";
+    // for (int i = 0; i < states_level->size(); i++)
+    //     cout << (*states_level)[i]->abs_column_id << " ";
+    // cout << "\n";
 
     sort( states_level->begin(), states_level->end(), State::compare );
     this->all_states.push_back(*states_level);
       
+}
+
+void Organization::update_all_states(int level)
+{
+    for (int i = level; i < this->all_states.size(); i++)
+        sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
+    
 }
 
 Organization* Organization::copy()
@@ -139,18 +153,18 @@ void Organization::delete_parent(int level, int level_id, int update_id)
                 {
                     grandpa_children = &parent->parents[k]->children;
 
-                    cout << "Parent " << parent->abs_column_id << "\n";
-                    for (int t = 0; t < grandpa_children->size(); t++)
-                        cout << (*grandpa_children)[t]->abs_column_id << " ";
-                    cout << "\n";
+                    // cout << "Parent " << parent->abs_column_id << "\n";
+                    // for (int t = 0; t < grandpa_children->size(); t++)
+                    //     cout << (*grandpa_children)[t]->abs_column_id << " ";
+                    // cout << "\n";
 
                     iter = find(grandpa_children->begin(), grandpa_children->end(), parent);
                     if( iter != grandpa_children->end() )
                         grandpa_children->erase(iter);
 
-                    for (int t = 0; t < grandpa_children->size(); t++)
-                        cout << (*grandpa_children)[t]->abs_column_id << " ";
-                    cout << "\n";
+                    // for (int t = 0; t < grandpa_children->size(); t++)
+                    //     cout << (*grandpa_children)[t]->abs_column_id << " ";
+                    // cout << "\n";
                     
                     grandpa_children->push_back(current);
                     new_parents->push_back(parent->parents[k]);
@@ -175,12 +189,16 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     }
     this->all_states.erase(all_states.begin() + level - 1);
     this->update_effectiveness();
+
+    for (int i = level-1; i < this->all_states.size(); i++)
+        sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
 }
 
 void Organization::add_parent(int level, int level_id, int update_id)
 {
     State *current = this->all_states[level][level_id];
     vector <State*> *candidates = &this->all_states[level-1];
+    int min_level;
 
     for( int i = candidates->size()-1; i >= 0; i--)
     {
@@ -190,7 +208,11 @@ void Organization::add_parent(int level, int level_id, int update_id)
             break;
         } 
     }
-    Organization::update_ancestors(current, this->instance, this->gamma, update_id);
+    min_level = Organization::update_ancestors(current, this->instance, this->gamma, update_id);
+
+    for (int i = min_level; i < this->all_states.size(); i++)
+        sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
+
     this->update_effectiveness();
 }
 
@@ -234,13 +256,13 @@ void Organization::update_descendants(State *patriarch, float gamma, int total_n
     }
 }
 
-void Organization::update_ancestors(State *descendant, Instance *inst, float gamma, int update_id)
+int Organization::update_ancestors(State *descendant, Instance *inst, float gamma, int update_id)
 {
     queue<State*> outdated_patriarchs; //PATRIARCHS WHOSE DESCENDANTS NEED TO UPDATE REACH_PROBS 
     queue<State*> queue; //QUEUE USED IN THE BREADTH-FIRST SEARCH
     queue.push(descendant);
     State *current;
-    int table_id, col_id;
+    int table_id, col_id, min_level;
     int has_changed = 1;
 
     while( !queue.empty() ){
@@ -277,14 +299,16 @@ void Organization::update_ancestors(State *descendant, Instance *inst, float gam
         }
         
     }
+    min_level = outdated_patriarchs.front()->level;
     //I NEED MOVE THIS TO ANOTHER PLACE
     while( !outdated_patriarchs.empty() )
     {
         current = outdated_patriarchs.front();
         outdated_patriarchs.pop();
+        min_level = min(min_level, current->level);
         Organization::update_descendants(current, gamma, inst->total_num_columns, update_id);
     }
-
+    return min_level + 1;
 }
 
 //GENERATE THE BASELINE ORGANIZATION

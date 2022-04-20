@@ -16,12 +16,13 @@ class Organization
         
         void compute_all_reach_probs();
         void init_all_states();
+        void update_all_states(int level);
         void update_effectiveness();
         Organization* copy();
         void delete_parent(int level, int level_id, int update_id);
         void add_parent(int level, int level_id, int update_id);
 
-        static void update_ancestors(State *descendant, Instance *inst, float gamma, int update_id);
+        static int update_ancestors(State *descendant, Instance *inst, float gamma, int update_id);
         static void update_descendants(State *patriarch, float gamma, int total_num_columns, int update_id);
         static Organization* generate_basic_organization(Instance * inst, float gamma);
         static Organization* generate_organization_by_clustering(Instance * inst, float gamma);
