@@ -2,9 +2,8 @@
 #include <bits/stdc++.h>
 #include <vector>
 #include <iostream>     // std::cout
-// #include <algorithm>    // std::shuffle
 #include <random>       // std::default_random_engine
-// #include <chrono>       // std::chrono::system_clock
+#include <time.h>
 using namespace std;
 
 //PROJECT FILES
@@ -36,16 +35,24 @@ Organization* modify_organization(Organization *org, int level, int level_id, in
     Organization *new_org_add = org->copy();
     Organization *new_org_del = org->copy();
 
+    #if DEBUG
     cout << "ORIGINAL: " << org->effectiveness << "\n\n";
     print_organization(org);
+    #endif
 
     new_org_add->add_parent(level, level_id, update_id);
+
+    #if DEBUG
     cout << "ADD: " << new_org_add->effectiveness << "\n\n";
     print_organization(new_org_add);
+    #endif
 
     new_org_del->delete_parent(level, level_id, update_id);
+
+    #if DEBUG
     cout << "REMOVE: " << new_org_del->effectiveness << "\n\n";
     print_organization(new_org_del);
+    #endif
 
     if(new_org_add->effectiveness > new_org_del->effectiveness)
         return new_org_add;
@@ -63,15 +70,10 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
     mt19937 generator(rand_dev());
     uniform_real_distribution<float> distribution(0.0, 1.0);
 
-    // print_organization(org);
-    // cout << "First Effectiveness: " << org->effectiveness << "\n\n";
-
     while (count < plateau_iters && org->all_states.size() >= 3)
     {
         new_org = modify_organization(org, level, level_id, update_id);
         increse_perc = ( new_org->effectiveness - org->effectiveness ) / org->effectiveness;
-
-        // cout << "\nEffectiveness: " << new_org->effectiveness << "\n";
 
         if( increse_perc >= 0 ) {
             if( increse_perc  < eps )
@@ -106,8 +108,21 @@ int main()
 {
     Instance * instance = Instance::read_instance();
     float gamma = 1.0;
+    Organization *org;
 
-    Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
-    local_search(org, 3, 0.01);
+    //PERFORMANCE EVALUATION
+    time_t start, end;
+    // int num_trials = 2;
+    // cout << "effectiveness,ellapsed_time\n";
+
+    time(&start);
+
+    org = Organization::generate_organization_by_clustering(instance, gamma);
+    org = local_search(org, 50, 0.01);
+
+    time(&end);
+
+    cout << org->effectiveness << ", " << difftime(end, start) << "\n";
+
     return 0;
 }

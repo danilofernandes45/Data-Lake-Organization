@@ -1,5 +1,19 @@
 #include "Organization.hpp"
 
+void Organization::destroy()
+{
+    this->instance = NULL;
+
+    for(int i = 0; i < this->all_states.size(); i++)
+    {
+        for(int j = 0; j < this->all_states[i].size(); j++)
+            this->all_states[i][j]->destroy();
+        vector<State*>().swap(this->all_states[i]);
+    } 
+    vector< vector<State*> >().swap(this->all_states);  
+    delete this;
+}
+
 void Organization::update_effectiveness()
 {
     State *leaf;
@@ -9,6 +23,7 @@ void Organization::update_effectiveness()
     for (int i = 0; i < this->instance->num_tables; i++)
         tables_discover_probs[i] = 1.0;
 
+    #if DEBUG
     cout << "Columns Overall Reach Probs: ";
     for (int i = 0; i < this->leaves.size(); i++)
     {
@@ -17,20 +32,33 @@ void Organization::update_effectiveness()
     }
 
     cout << "\nColumns Discover Probs: ";
+    #endif
+
     for (int i = 0; i < this->leaves.size(); i++)
     {   
         leaf = this->leaves[i];
         table_id = this->instance->map[leaf->abs_column_id][0];
         tables_discover_probs[table_id] *= ( 1 - leaf->reach_probs[leaf->abs_column_id] );
+
+        #if DEBUG
         cout << leaf->reach_probs[leaf->abs_column_id] << " (" << leaf->abs_column_id << ") ";
+        #endif
     }
+    #if DEBUG
     cout << "\nTables Discover Probs: ";
+    #endif
+
     this->effectiveness = 0.0;
     for (int i = 0; i < this->instance->num_tables; i++){
         this->effectiveness += 1 - tables_discover_probs[i];
+
+        #if DEBUG
         cout << 1 - tables_discover_probs[i] << " ";
+        #endif
     }
+    #if DEBUG
     cout << "\n\n";
+    #endif
 
     this->effectiveness /= this->instance->num_tables; 
 }
@@ -258,9 +286,11 @@ void Organization::update_descendants(State *patriarch, float gamma, int total_n
 
 int Organization::update_ancestors(State *descendant, Instance *inst, float gamma, int update_id)
 {
-    queue<State*> outdated_patriarchs; //PATRIARCHS WHOSE DESCENDANTS NEED TO UPDATE REACH_PROBS 
     queue<State*> queue; //QUEUE USED IN THE BREADTH-FIRST SEARCH
     queue.push(descendant);
+    //PATRIARCHS WHOSE DESCENDANTS NEED TO UPDATE REACH_PROBS
+    priority_queue<State*, vector<State*>, CompareLevel> outdated_states;  
+    //ITERATORS
     State *current;
     int table_id, col_id, min_level;
     int has_changed = 1;
@@ -305,18 +335,23 @@ int Organization::update_ancestors(State *descendant, Instance *inst, float gamm
                 queue.push(current->parents[i]);
         } else {
             //ITS SIBILINGS NEED UPDATE THIER reach_probs
-            outdated_patriarchs.push(current);
+            outdated_states.push(current);
         }
         
     }
-    min_level = outdated_patriarchs.front()->level;
-    //I NEED MOVE THIS TO ANOTHER PLACE
-    while( !outdated_patriarchs.empty() )
+    //UPDATE AFFECTED SUBGRAPHS WITH outdated_states AS PATRIARCHS
+    min_level = outdated_states.top()->level;
+    while( !outdated_states.empty() )
     {
-        current = outdated_patriarchs.front();
-        outdated_patriarchs.pop();
-        min_level = min(min_level, current->level);
-        Organization::update_descendants(current, gamma, inst->total_num_columns, update_id);
+        current = outdated_states.top();
+        outdated_states.pop();
+        if( current->update_id != update_id )
+        {
+            current->update_reach_probs(gamma, inst->total_num_columns);
+            current->update_id = update_id;
+            for(int i = 0; i < current->children.size(); i++)
+                outdated_states.push(current->children[i]);
+        } 
     }
     return min_level + 1;
 }

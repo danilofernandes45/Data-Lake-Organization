@@ -4,6 +4,8 @@
 #include "Cluster.hpp"
 #include <algorithm>
 
+#define DEBUG 0
+
 class Organization
 {
     public:
@@ -21,6 +23,7 @@ class Organization
         Organization* copy();
         void delete_parent(int level, int level_id, int update_id);
         void add_parent(int level, int level_id, int update_id);
+        void destroy();
 
         static int update_ancestors(State *descendant, Instance *inst, float gamma, int update_id);
         static void update_descendants(State *patriarch, float gamma, int total_num_columns, int update_id);
