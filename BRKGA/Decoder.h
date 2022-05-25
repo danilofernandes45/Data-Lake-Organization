@@ -22,15 +22,18 @@
 #include <vector>
 #include <algorithm>
 
+#include <bits/stdc++.h>
+using namespace std;
+
 class Decoder {
 public:
-	Decoder(std::vector< std::vector<float> > vectors);
+	Decoder(std::vector< std::vector<float> > vectors, unsigned num_clusters);
 	~Decoder();
 
 	double decode(const std::vector< double >& chromosome) const;
 
 private:
-	float factor;
+	unsigned num_clusters;
 	std::vector< std::vector<float> > vectors;
 };
 
