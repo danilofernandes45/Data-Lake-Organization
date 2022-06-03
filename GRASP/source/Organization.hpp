@@ -21,10 +21,11 @@ class Organization
         void update_all_states(int level);
         void update_effectiveness();
         Organization* copy();
-        void delete_parent(int level, int level_id, int update_id);
+        vector<State*> delete_parent(int level, int level_id, int update_id);
         int add_parent(int level, int level_id, int update_id);
 
         void undo_add_parent(Organization* org, int level, int level_id, int min_level);
+        void undo_delete_parent(Organization* prev_org, vector<State*> deleted_states, int level);
         void destroy();
 
         static int update_ancestors(State *descendant, Instance *inst, float gamma, int update_id);

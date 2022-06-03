@@ -164,11 +164,11 @@ Organization* Organization::copy()
     return copy; 
 }
 
-void Organization::delete_parent(int level, int level_id, int update_id)
+vector<State*> Organization::delete_parent(int level, int level_id, int update_id)
 {
     State *current, *parent;
     queue<State*> outdated_states;
-    vector<State*> *new_parents, *grandpa_children;
+    vector<State*> *new_parents, *grandpa_children, deleted_states;
     vector<State*>::iterator iter;
     for (int i = 0; i < this->all_states[level].size(); i++)
     {
@@ -217,12 +217,105 @@ void Organization::delete_parent(int level, int level_id, int update_id)
         if( this->all_states[level-1][i]->children.size() == 0 )
             this->all_states[level].push_back( this->all_states[level-1][i] );
     }
-    this->all_states.erase(all_states.begin() + level - 1);
+
+    deleted_states = this->all_states[level-1];
+    this->all_states.erase(this->all_states.begin() + level - 1);
     this->update_effectiveness();
 
     // Unnecessary in a local search
     // for (int i = level-1; i < this->all_states.size(); i++)
     //     sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
+
+    return deleted_states;
+}
+
+//IT CONSIDERS THAT THE LAST PERFORMED OPERATION WAS A delete_parent IN THE NODES LOCATED IN level
+void Organization::undo_delete_parent(Organization* prev_org, vector<State*> deleted_states, int level)
+{
+    State *parent, *child, *current, *previous;
+    int *map, max_id;
+
+    //REMOVE THE LEAF NODES INSERTED DURING delete_parent
+    //THESE NODES ARE FROM THE REMOVED LEVEL
+    this->all_states[level-1].resize( prev_org->all_states[level].size() );
+
+    //REMOVE ALL PARENTHOOD RELATIONSHIP BETWEEN level-1 and level-2
+    for(int i = 0; i < this->all_states[level-2].size(); i++)
+        this->all_states[level-2][i]->children.clear();
+    
+    for(int i = 0; i < this->all_states[level-1].size(); i++)
+        this->all_states[level-1][i]->parents.clear();
+
+    //ADD BACK deleted_states IN ITS PREVIOUS POSITION IN all_states
+    this->all_states.insert(this->all_states.begin() + level-1, deleted_states);
+    //GENERATE MAP: abs_column_id -> id_{deleted_states}
+    //THE GOAL IS TO ENSURE THE SAME ORDER IN BETWEEN this->all_states[i][j]->parents AND prev_org->all_states[i][j]->parents
+    //THE ANALOGOUS IS CONSIDERED FOR all_states[i][j]->children
+    max_id = 0;
+    for (int i = 0; i < deleted_states.size(); i++)
+        max_id = max( max_id, abs( deleted_states[i]->abs_column_id ) );
+
+    map = new int[ 2 * (max_id+1) ];
+    for (int i = 0; i < deleted_states.size(); i++) {
+        max_id = deleted_states[i]->abs_column_id;
+        if( max_id < 0 )
+            max_id = 2 * abs(max_id);
+        else
+            max_id = 2 * abs(max_id) + 1;
+        map[max_id] = i;
+    }
+    
+    //ADD PARENTHOOD RELATIONSHIPS BETWEEN deleted_states AND ITS PREVIOUS PARENTS
+    for (int i = 0; i < prev_org->all_states[level-2].size(); i++)
+    {
+        parent = prev_org->all_states[level-2][i];
+        for (int j = 0; j < parent->children.size(); j++)
+        {
+            max_id = parent->children[j]->abs_column_id;
+            if( max_id < 0 )
+                max_id = 2 * abs(max_id);
+            else
+                max_id = 2 * abs(max_id) + 1;
+
+            current = deleted_states[ map[max_id] ];
+            this->all_states[level-2][i]->children.push_back(current);
+        }
+    }
+    //ADD PARENTHOOD RELATIONSHIPS BETWEEN deleted_states AND ITS PREVIOUS CHILDREN
+    for (int i = 0; i < prev_org->all_states[level].size(); i++)
+    {
+        child = prev_org->all_states[level][i];
+        for (int j = 0; j < child->parents.size(); j++)
+        {
+            max_id = child->parents[j]->abs_column_id;
+            if( max_id < 0 )
+                max_id = 2 * abs(max_id);
+            else
+                max_id = 2 * abs(max_id) + 1;
+
+            current = deleted_states[ map[max_id] ];
+            this->all_states[level][i]->parents.push_back(current);
+        }
+    }
+
+    //RECOVER PREVIOUS STATES' PROBABILITIES
+    for(int i = level-1; i < this->all_states.size(); i++)
+    {
+        for(int j = 0; j < this->all_states[i].size(); j++)
+        {
+            previous = prev_org->all_states[i][j];
+            current = this->all_states[i][j];
+            if( previous->update_id != current->update_id )
+            {
+                current->update_id = previous->update_id;
+                current->level = previous->level;
+                current->overall_reach_prob = previous->overall_reach_prob;
+                for(int r = 0; r < this->instance->total_num_columns; r++)
+                    current->reach_probs[r] = previous->reach_probs[r];
+            }
+        }
+    }
+    this->effectiveness = prev_org->effectiveness;
 }
 
 int Organization::add_parent(int level, int level_id, int update_id)
@@ -257,7 +350,7 @@ int Organization::add_parent(int level, int level_id, int update_id)
     return min_level;
 }
 
-//IT CONSIDERS THAT THE LAST PERFORMED OPERATION IS A add_parent IN THE NODE LOCATED IN (level, level_id)
+//IT CONSIDERS THAT THE LAST PERFORMED OPERATION WAS A add_parent IN THE NODE LOCATED IN (level, level_id)
 void Organization::undo_add_parent(Organization* prev_org, int level, int level_id, int min_level)
 {
 

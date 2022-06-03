@@ -32,18 +32,61 @@ void print_organization(Organization *org)
     cout << "\n";
 }
 
+// Organization* best_neighbor_delete(Organization *org, int update_id)
+// {
+//     cout << "Delete - ";
+//     Organization *new_org;
+//     Organization *best_org = NULL;
+
+//     cout << "org: " <<  org->effectiveness << endl;
+
+//     for(int level = 2; level < org->all_states.size(); level++)
+//     {
+//         new_org = org->copy();
+//         new_org->delete_parent(level, 0, update_id);
+//         cout << "new_org: " <<  new_org->effectiveness << endl;
+//         if(best_org == NULL || new_org->effectiveness > best_org->effectiveness){
+//             best_org = new_org;
+//             // cout << "best_org: " << best_org->effectiveness << endl;
+//         }
+//     }
+//     return best_org;
+// }
+
 Organization* best_neighbor_delete(Organization *org, int update_id)
 {
-    cout << "Delete - ";
-    Organization *new_org;
-    Organization *best_org = NULL;
+    // cout << "Delete - ";
+    Organization *aux; 
+    Organization *best_org = org->copy();
+    Organization *new_org = org->copy();
+
+    vector<State*> best_deleted_states, deleted_states;
+    int best_level = -1;
+
+    // cout << "org: " <<  org->effectiveness << endl;
+    // print_organization(org);
 
     for(int level = 2; level < org->all_states.size(); level++)
     {
-        new_org = org->copy();
-        new_org->delete_parent(level, 0, update_id);
-        if(best_org == NULL || new_org->effectiveness > best_org->effectiveness)
+        deleted_states = new_org->delete_parent(level, 0, update_id);
+        // cout << "new_org: " <<  new_org->effectiveness << endl;
+        if( new_org->effectiveness > best_org->effectiveness ) {
+            aux = best_org;
             best_org = new_org;
+            new_org = aux;
+
+            if( best_level >= 0 )
+                new_org->undo_delete_parent(org, best_deleted_states, best_level );
+
+            best_level = level;
+            best_deleted_states = deleted_states;
+
+            // cout << "best_org: " << best_org->effectiveness << endl;
+            // cout << "new_org: " << new_org->effectiveness << endl; 
+        } else {
+            new_org->undo_delete_parent(org, deleted_states, level);
+            // print_organization(new_org);
+        }
     }
     return best_org;
 }
@@ -71,7 +114,7 @@ Organization* best_neighbor_delete(Organization *org, int update_id)
 
 Organization* best_neighbor_add(Organization *org, int update_id)
 {
-    cout << "Add - ";
+    // cout << "Add - ";
     Organization *aux; 
     Organization *best_org = org->copy();
     Organization *new_org = org->copy();
@@ -109,7 +152,7 @@ Organization* best_neighbor_add(Organization *org, int update_id)
 }
 
 //RVND Local Search
-Organization* local_search(Organization *org)
+pair<Organization*, int> local_search(Organization *org, int update_id)
 {
     vector<best_neighbor_func> neighborhood {&best_neighbor_add, &best_neighbor_delete};
     // random_shuffle(neighborhood.begin(), neighborhood.end());
@@ -118,7 +161,6 @@ Organization* local_search(Organization *org)
 
     Organization *new_org;
     unsigned k = 0;
-    int update_id = 1;
     while (k < neighborhood.size())
     {
         new_org = neighborhood[k](org, update_id);
@@ -129,13 +171,53 @@ Organization* local_search(Organization *org)
             k = 0;
             org = new_org;
             update_id++;
-            cout << "Accepted" << endl;
+            // cout << "Accepted" << endl;
         } else {
             k++;
-            cout << "Rejected" << endl;
+            // cout << "Rejected" << endl;
         }
     }
-    return org;
+    return {org, update_id};
+}
+
+Organization* perturbation(Organization *org, int update_id)
+{
+    Organization *new_org = org->copy();
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    srand(seed);
+
+    int level = rand() % org->all_states.size();
+    level = max(level, 2);
+    int level_id = rand() % org->all_states[level].size();
+
+    if( rand() % 2 == 0 )
+        new_org->add_parent(level, level_id, update_id);
+    else
+        new_org->delete_parent(level, level_id, update_id);
+    
+    return new_org;
+}
+
+Organization iterated_local_search(Instance *instance, float gamma, int max_iter)
+{
+    int update_id = 1;
+    Organization *new_org;
+    pair<Organization*, int> local_opt;
+
+    Organization *best_org = Organization::generate_organization_by_clustering(instance, gamma);
+    local_opt = local_search(best_org, update_id);
+    best_org = local_opt.first;
+    update_id = local_opt.second;
+
+    for(int i = 0; i < max_iter; i++)
+    {
+        new_org = perturbation(best_org, update_id);
+        local_opt = local_search(new_org, update_id + 1);
+        if( local_opt.first->effectiveness > best_org->effectiveness ){
+            best_org = local_opt.first;
+            update_id = local_opt.second;
+        }
+    }
 }
 
 
@@ -151,7 +233,7 @@ int main()
     time(&start);
 
     org = Organization::generate_organization_by_clustering(instance, gamma);
-    org = local_search(org);
+    org = local_search(org, 1).first;
 
     time(&end);
 
