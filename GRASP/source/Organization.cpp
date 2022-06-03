@@ -431,7 +431,6 @@ void Organization::update_descendants(State *patriarch, float gamma, int total_n
             //ADD ITS CHILDREN TO THE QUEUE
             for(int i=0; i < current->children.size(); i++ )
                 queue.push(current->children[i]);
-
             current->update_id = update_id;
         }
     }
@@ -541,6 +540,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
 
             state->abs_column_id = count;
             state->update_id = -1;
+            state->reach_probs = new float[inst->total_num_columns];
             state->domain = new int[inst->total_num_columns];
             state->domain[count] = 1;
             count++;
@@ -553,6 +553,10 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
                 org->root->sum_vector[d] += state->sum_vector[d];
             //Adding the leaf to the organization as child of the root
             org->root->children.push_back(state);
+
+            state->similarities = new float[inst->total_num_columns];
+            for(int s=0; s < inst->total_num_columns; s++)
+                state->similarities[s] = cossine_similarity(state->sum_vector, inst->tables[inst->map[s][0]]->sum_vectors[inst->map[s][1]], inst->embedding_dim);
         }   
     }
     org->compute_all_reach_probs();
@@ -677,9 +681,7 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
 Organization* Organization::generate_organization_by_heuristic(Instance * inst, float gamma)
 {
     Organization *org = Organization::generate_organization_by_clustering(inst, gamma, false);
-    int num_merges = ceil( 0.5 * ( abs(org->root->abs_column_id) - inst->total_num_columns ) );
-
-    cout << abs(org->root->abs_column_id) << " " << inst->total_num_columns << " " << num_merges << endl;
+    int num_merges = ceil( 0.1 * ( abs(org->root->abs_column_id) - inst->total_num_columns ) );
 
     //GET NON-LEAF NODES IN THE ORGANIZATION
     State *current, *child;
@@ -694,8 +696,10 @@ Organization* Organization::generate_organization_by_heuristic(Instance * inst, 
         for(int i=0; i < current->children.size(); i++) {
             child = current->children[i];
             if( child->children.size() > 0 ){
-                queue.push(child);
-                internal_states.push_back(child);
+                if( child->children[0]->children.size() > 0 || child->children[1]->children.size() > 0 ) {
+                    queue.push(child);
+                    internal_states.push_back(child);
+                }
             }
         }
     }
@@ -705,17 +709,21 @@ Organization* Organization::generate_organization_by_heuristic(Instance * inst, 
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     srand(seed);
     vector<State*> new_children;
+    bool flag;
 
     for(int i = 0; i < num_merges; i++)
     {
         id = rand() % internal_states.size();
         current = internal_states[id];
         if( current->children.size() > 0 ){
+            flag = false;
             for(int j = 0; j < current->children.size(); j++) {
                 child = current->children[j];
                 if( child->children.size() == 0 )
                     new_children.push_back(child);
                 else {
+                    flag = true;
+                    // cout << child->abs_column_id << " " << child->children.size() <<  endl;
                     for(int k = 0; k < child->children.size(); k++) {
                         child->children[k]->parents[0] = current; //CHANGE THE PARENT
                         new_children.push_back(child->children[k]);
@@ -723,8 +731,15 @@ Organization* Organization::generate_organization_by_heuristic(Instance * inst, 
                     child->children.clear();
                 }
             }
-            current->children = new_children;
+            if(flag)
+                current->children = new_children;
+            else {
+                internal_states.erase(internal_states.begin() + id);
+                i--;
+            }
+            new_children.clear();
         } else {
+            internal_states.erase(internal_states.begin() + id);
             i--;
         }
     }

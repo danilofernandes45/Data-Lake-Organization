@@ -221,6 +221,24 @@ Organization* iterated_local_search(Instance *instance, float gamma, int max_ite
     return best_org;
 }
 
+Organization* grasp(Instance *instance, float gamma, int max_iter)
+{
+    double best_effectiveness = -1;
+    Organization *new_org, *best_org = NULL;
+    pair<Organization*, int> local_opt;
+
+    for(int i = 0; i < max_iter; i++)
+    {
+        new_org = Organization::generate_organization_by_heuristic(instance, gamma);
+        local_opt = local_search(new_org, 1);
+        if( local_opt.first->effectiveness > best_effectiveness ){
+            best_org = local_opt.first;
+            best_effectiveness = best_org->effectiveness;
+        }
+    }
+    return best_org;
+}
+
 
 int main()
 {
@@ -233,11 +251,13 @@ int main()
 
     time(&start);
 
+    org = Organization::generate_basic_organization(instance, gamma);
+    cout << org->effectiveness << " " << org->all_states.size() << endl;
     org = Organization::generate_organization_by_clustering(instance, gamma);
-    cout << org->effectiveness << endl;
+    cout << org->effectiveness << " " << org->all_states.size() << endl;
     org = Organization::generate_organization_by_heuristic(instance, gamma);
-    cout << org->effectiveness << endl;
-    // org = local_search(org, 1).first;
+    cout << org->effectiveness << " " << org->all_states.size() << endl;
+    org = grasp(instance, gamma, 10);
 
     // org = iterated_local_search(instance, gamma, 5);
 
