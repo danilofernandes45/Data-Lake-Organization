@@ -87,7 +87,7 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
             update_id++; 
         } else {
             prob_accept = new_org->effectiveness / org->effectiveness;
-            cout << distribution(generator) << ", " << prob_accept << endl;
+            // cout << distribution(generator) << ", " << prob_accept << endl;
             if(  distribution(generator) < prob_accept )
             {
                 org = new_org;
@@ -119,7 +119,7 @@ int main()
     time(&start);
 
     org = Organization::generate_organization_by_clustering(instance, gamma);
-    org = local_search(org, 100, 0.001);
+    org = local_search(org, 50, 0.001);
 
     time(&end);
 

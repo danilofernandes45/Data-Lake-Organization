@@ -565,7 +565,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
 //GENERATE A ORGANIZATION BY HIERARQUICAL CLUSTERING
 //ALGORITHM: NEAREST NEIGHBORS CHAIN -> O(N²)
 //DISTANCE BETWEEN CLUSTERS: UNWEIGHTED PAIR-GROUP METHOD WITH ARITHMETIC MEAN (UPGMA)
-Organization* Organization::generate_organization_by_clustering(Instance * inst, float gamma)
+Organization* Organization::generate_organization_by_clustering(Instance * inst, float gamma, bool compute_probs)
 {
     //Organization setup
     Organization *org = new Organization;
@@ -666,8 +666,72 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     }
 
     org->root = active_clusters->state;
+    if( compute_probs ){
+        org->compute_all_reach_probs();
+        org->init_all_states();
+        org->update_effectiveness();
+    }
+    return org;
+}
+
+Organization* Organization::generate_organization_by_heuristic(Instance * inst, float gamma)
+{
+    Organization *org = Organization::generate_organization_by_clustering(inst, gamma, false);
+    int num_merges = ceil( 0.5 * ( abs(org->root->abs_column_id) - inst->total_num_columns ) );
+
+    cout << abs(org->root->abs_column_id) << " " << inst->total_num_columns << " " << num_merges << endl;
+
+    //GET NON-LEAF NODES IN THE ORGANIZATION
+    State *current, *child;
+    queue<State*> queue;
+    vector<State*> internal_states;
+    queue.push(org->root);
+    internal_states.push_back(org->root);
+    //O(N)
+    while( !queue.empty() ){
+        current = queue.front();
+        queue.pop();
+        for(int i=0; i < current->children.size(); i++) {
+            child = current->children[i];
+            if( child->children.size() > 0 ){
+                queue.push(child);
+                internal_states.push_back(child);
+            }
+        }
+    }
+
+
+    int id;
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    srand(seed);
+    vector<State*> new_children;
+
+    for(int i = 0; i < num_merges; i++)
+    {
+        id = rand() % internal_states.size();
+        current = internal_states[id];
+        if( current->children.size() > 0 ){
+            for(int j = 0; j < current->children.size(); j++) {
+                child = current->children[j];
+                if( child->children.size() == 0 )
+                    new_children.push_back(child);
+                else {
+                    for(int k = 0; k < child->children.size(); k++) {
+                        child->children[k]->parents[0] = current; //CHANGE THE PARENT
+                        new_children.push_back(child->children[k]);
+                    }
+                    child->children.clear();
+                }
+            }
+            current->children = new_children;
+        } else {
+            i--;
+        }
+    }
+
     org->compute_all_reach_probs();
     org->init_all_states();
     org->update_effectiveness();
+
     return org;
 }

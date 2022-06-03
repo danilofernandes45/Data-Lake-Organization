@@ -34,17 +34,17 @@ void print_organization(Organization *org)
 
 // Organization* best_neighbor_delete(Organization *org, int update_id)
 // {
-//     cout << "Delete - ";
+//     // cout << "Delete - ";
 //     Organization *new_org;
 //     Organization *best_org = NULL;
 
-//     cout << "org: " <<  org->effectiveness << endl;
+//     // cout << "org: " <<  org->effectiveness << endl;
 
 //     for(int level = 2; level < org->all_states.size(); level++)
 //     {
 //         new_org = org->copy();
 //         new_org->delete_parent(level, 0, update_id);
-//         cout << "new_org: " <<  new_org->effectiveness << endl;
+//         // cout << "new_org: " <<  new_org->effectiveness << endl;
 //         if(best_org == NULL || new_org->effectiveness > best_org->effectiveness){
 //             best_org = new_org;
 //             // cout << "best_org: " << best_org->effectiveness << endl;
@@ -198,7 +198,7 @@ Organization* perturbation(Organization *org, int update_id)
     return new_org;
 }
 
-Organization iterated_local_search(Instance *instance, float gamma, int max_iter)
+Organization* iterated_local_search(Instance *instance, float gamma, int max_iter)
 {
     int update_id = 1;
     Organization *new_org;
@@ -218,6 +218,7 @@ Organization iterated_local_search(Instance *instance, float gamma, int max_iter
             update_id = local_opt.second;
         }
     }
+    return best_org;
 }
 
 
@@ -233,7 +234,12 @@ int main()
     time(&start);
 
     org = Organization::generate_organization_by_clustering(instance, gamma);
-    org = local_search(org, 1).first;
+    cout << org->effectiveness << endl;
+    org = Organization::generate_organization_by_heuristic(instance, gamma);
+    cout << org->effectiveness << endl;
+    // org = local_search(org, 1).first;
+
+    // org = iterated_local_search(instance, gamma, 5);
 
     time(&end);
 

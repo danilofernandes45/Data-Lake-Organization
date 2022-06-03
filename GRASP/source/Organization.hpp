@@ -31,7 +31,8 @@ class Organization
         static int update_ancestors(State *descendant, Instance *inst, float gamma, int update_id);
         static void update_descendants(State *patriarch, float gamma, int total_num_columns, int update_id);
         static Organization* generate_basic_organization(Instance * inst, float gamma);
-        static Organization* generate_organization_by_clustering(Instance * inst, float gamma);
+        static Organization* generate_organization_by_clustering(Instance * inst, float gamma, bool compute_probs = true);
+        static Organization* generate_organization_by_heuristic(Instance * inst, float gamma);
 };
 
 #endif
