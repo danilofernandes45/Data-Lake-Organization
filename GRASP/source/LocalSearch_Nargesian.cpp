@@ -251,12 +251,12 @@ int main()
 
     time(&start);
 
-    org = Organization::generate_basic_organization(instance, gamma);
-    cout << org->effectiveness << " " << org->all_states.size() << endl;
-    org = Organization::generate_organization_by_clustering(instance, gamma);
-    cout << org->effectiveness << " " << org->all_states.size() << endl;
-    org = Organization::generate_organization_by_heuristic(instance, gamma);
-    cout << org->effectiveness << " " << org->all_states.size() << endl;
+    // org = Organization::generate_basic_organization(instance, gamma);
+    // cout << org->effectiveness << " " << org->all_states.size() << endl;
+    // org = Organization::generate_organization_by_clustering(instance, gamma);
+    // cout << org->effectiveness << " " << org->all_states.size() << endl;
+    // org = Organization::generate_organization_by_heuristic(instance, gamma);
+    // cout << org->effectiveness << " " << org->all_states.size() << endl;
     org = grasp(instance, gamma, 10);
 
     // org = iterated_local_search(instance, gamma, 5);
