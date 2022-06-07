@@ -198,6 +198,38 @@ Organization* perturbation(Organization *org, int update_id)
     return new_org;
 }
 
+Organization* simulated_annealing(Instance *instance, float gamma, int max_iter, float alpha)
+{
+    int update_id = 1;
+    Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
+    Organization *best_org = org;
+    Organization *new_org;
+    float T = org->effectiveness;
+    float T_min = pow(alpha, 100);
+    float delta;
+    bool x;
+    //GENERATOR OF RANDOM NUMBERS
+    random_device rand_dev;
+    mt19937 generator(rand_dev());
+    uniform_real_distribution<float> distribution(0.0, 1.0);
+
+    while( T > T_min ) {
+        for(int i = 0; i < max_iter; i++) {
+            new_org = perturbation(org, update_id);
+            delta = org->effectiveness - new_org->effectiveness;
+            if( delta < 0 ) {
+                org = new_org;
+                if( new_org->effectiveness > best_org->effectiveness )
+                    best_org = new_org;
+            } else if( distribution(generator) < exp(-delta/T) ) {
+                org = new_org;
+            }
+        }
+        T = alpha * T;
+    }
+    return best_org;
+}
+
 Organization* iterated_local_search(Instance *instance, float gamma, int max_iter)
 {
     int update_id = 1;
@@ -255,15 +287,17 @@ int main()
     cout << org->effectiveness << " " << org->all_states.size() << endl;
     org = Organization::generate_organization_by_clustering(instance, gamma);
     cout << org->effectiveness << " " << org->all_states.size() << endl;
-    org = Organization::generate_organization_by_heuristic(instance, gamma);
-    cout << org->effectiveness << " " << org->all_states.size() << endl;
-    org = grasp(instance, gamma, 10);
+    // org = Organization::generate_organization_by_heuristic(instance, gamma);
+    // cout << org->effectiveness << " " << org->all_states.size() << endl;
+    // org = grasp(instance, gamma, 10);
 
     // org = iterated_local_search(instance, gamma, 5);
 
+    org = simulated_annealing(instance, gamma, 100, 0.01);
+
     time(&end);
 
-    cout << org->effectiveness << ", " << difftime(end, start) << "\n";
+    cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(end, start) << "\n";
 
     return 0;
 }

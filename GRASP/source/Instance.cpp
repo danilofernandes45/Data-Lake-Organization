@@ -8,7 +8,7 @@ Instance* Instance::read_instance()
     instance->total_num_columns = 0;
     instance->tables = new Table*[instance->num_tables];
 
-    instance->num_tables = min(50, instance->num_tables);
+    instance->num_tables = min(10, instance->num_tables);
 
     Table *table;
 
