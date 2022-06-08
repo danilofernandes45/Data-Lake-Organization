@@ -225,6 +225,12 @@ vector<State*> Organization::delete_parent(int level, int level_id, int update_i
     // Unnecessary in a local search
     // for (int i = level-1; i < this->all_states.size(); i++)
     //     sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
+    
+    this->last_modification = new Modification;
+    this->last_modification->operation = 1;
+    this->last_modification->level = level;
+    this->last_modification->level_id = level_id;
+    this->last_modification->deleted_states = deleted_states;
 
     return deleted_states;
 }
@@ -347,6 +353,12 @@ int Organization::add_parent(int level, int level_id, int update_id)
         this->update_effectiveness();
     }
 
+    this->last_modification = new Modification;
+    this->last_modification->operation = 0;
+    this->last_modification->level = level;
+    this->last_modification->level_id = level_id;
+    this->last_modification->min_level = min_level;
+
     return min_level;
 }
 
@@ -395,6 +407,19 @@ void Organization::undo_add_parent(Organization* prev_org, int level, int level_
         }
     }
     this->effectiveness = prev_org->effectiveness;
+}
+
+void Organization::undo_last_operation(Organization* prev_org)
+{
+    if( this->last_modification != NULL ) {
+        if( this->last_modification->operation == 0 ) {
+            this->undo_add_parent(prev_org, this->last_modification->level, this->last_modification->level_id, this->last_modification->min_level);
+        } else {
+            this->undo_delete_parent(prev_org, this->last_modification->deleted_states, this->last_modification->level);
+        }
+    }
+
+    this->last_modification = NULL;
 }
 
 //IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL

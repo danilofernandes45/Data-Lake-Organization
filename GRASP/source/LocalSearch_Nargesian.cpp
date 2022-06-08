@@ -198,10 +198,8 @@ Organization* perturbation(Organization *org, int update_id)
     return new_org;
 }
 
-Organization* sa_perturbation(Organization *org, int update_id)
+void sa_perturbation(Organization *org, int update_id)
 {
-    Organization *new_org = org->copy();
-
     //GENERATOR OF RANDOM NUMBERS
     random_device rand_dev;
     mt19937 generator(rand_dev());
@@ -241,18 +239,16 @@ Organization* sa_perturbation(Organization *org, int update_id)
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     srand(seed);
     if( rand() % 2 == 0 )
-        new_org->add_parent(level, level_id, update_id);
+        org->add_parent(level, level_id, update_id);
     else
-        new_org->delete_parent(level, level_id, update_id);
-    
-    return new_org;
+        org->delete_parent(level, level_id, update_id);
 }
 
 Organization* simulated_annealing(Organization *org, int max_iter, float alpha)
 {
     int update_id = 1;
     Organization *best_org = org;
-    Organization *new_org;
+    Organization *new_org = org->copy();
     float T = org->effectiveness;
     float T_min = pow(alpha, 10000);
     float delta;
@@ -263,15 +259,18 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha)
 
     while( T > T_min ) {
         for(int i = 0; i < max_iter; i++) {
-            new_org = sa_perturbation(org, update_id);
+            sa_perturbation(new_org, update_id);
             delta = org->effectiveness - new_org->effectiveness;
             if( delta < 0 || distribution(generator) < exp(-delta/T) ) {
-                org = new_org;
-                if( new_org->effectiveness > best_org->effectiveness )
-                    best_org = new_org;
-            } 
-            if( org->all_states.size() == 2 )
-                org = best_org;
+                org = new_org->copy();
+                update_id++;
+                if( org->effectiveness > best_org->effectiveness )
+                    best_org = org;
+            } else {
+                new_org->undo_last_operation(org);
+            }
+            if( new_org->all_states.size() == 2 )
+                new_org = best_org->copy();
         }
         T = alpha * T;
     }

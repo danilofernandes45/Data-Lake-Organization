@@ -2,6 +2,7 @@
 #define ORGANIZATION_HPP
 
 #include "Cluster.hpp"
+#include "Modification.hpp"
 #include <algorithm>
 
 #define DEBUG 0
@@ -15,6 +16,7 @@ class Organization
         vector< vector<State*> > all_states;
         vector<State*> leaves;
         float effectiveness;
+        Modification *last_modification = NULL; //LAST MODIFICATION ON THE ORGANIZATION
         
         void compute_all_reach_probs();
         void init_all_states();
@@ -24,8 +26,9 @@ class Organization
         vector<State*> delete_parent(int level, int level_id, int update_id);
         int add_parent(int level, int level_id, int update_id);
 
-        void undo_add_parent(Organization* org, int level, int level_id, int min_level);
+        void undo_add_parent(Organization* prev_org, int level, int level_id, int min_level);
         void undo_delete_parent(Organization* prev_org, vector<State*> deleted_states, int level);
+        void undo_last_operation(Organization* prev_org);
         void destroy();
 
         static int update_ancestors(State *descendant, Instance *inst, float gamma, int update_id);
