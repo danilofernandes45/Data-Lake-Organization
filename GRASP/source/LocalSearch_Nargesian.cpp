@@ -354,7 +354,8 @@ int main()
 
     // org = iterated_local_search(instance, gamma, 5);
 
-    org = multistart_sa(instance, gamma, 10, 200, 0.001);
+    org = simulated_annealing(org, 200, 0.001);
+    // org = multistart_sa(instance, gamma, 10, 50, 0.001);
 
     time(&end);
 
