@@ -205,9 +205,8 @@ Organization* simulated_annealing(Instance *instance, float gamma, int max_iter,
     Organization *best_org = org;
     Organization *new_org;
     float T = org->effectiveness;
-    float T_min = pow(alpha, 100);
+    float T_min = pow(alpha, 1000);
     float delta;
-    bool x;
     //GENERATOR OF RANDOM NUMBERS
     random_device rand_dev;
     mt19937 generator(rand_dev());
@@ -217,13 +216,13 @@ Organization* simulated_annealing(Instance *instance, float gamma, int max_iter,
         for(int i = 0; i < max_iter; i++) {
             new_org = perturbation(org, update_id);
             delta = org->effectiveness - new_org->effectiveness;
-            if( delta < 0 ) {
+            if( delta < 0 || distribution(generator) < exp(-delta/T) ) {
                 org = new_org;
                 if( new_org->effectiveness > best_org->effectiveness )
                     best_org = new_org;
-            } else if( distribution(generator) < exp(-delta/T) ) {
-                org = new_org;
-            }
+            } 
+            if( org->all_states.size() == 2 )
+                org = best_org;
         }
         T = alpha * T;
     }
@@ -293,7 +292,7 @@ int main()
 
     // org = iterated_local_search(instance, gamma, 5);
 
-    org = simulated_annealing(instance, gamma, 100, 0.01);
+    org = simulated_annealing(instance, gamma, 100, 0.001);
 
     time(&end);
 
