@@ -132,7 +132,7 @@ Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, i
 int main()
 {
     Instance * instance = Instance::read_instance();
-    float gamma = 5.0;
+    float gamma = 10.0;
     Organization *org;
 
     //PERFORMANCE EVALUATION
