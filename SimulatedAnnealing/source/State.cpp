@@ -34,7 +34,7 @@ State* State::copy(int total_num_columns, int embedding_dim)
     for (int i = 0; i < embedding_dim; i++)
         copy->sum_vector[i] = this->sum_vector[i];
 
-    copy->reach_probs = new float[total_num_columns];
+    copy->reach_probs = new double[total_num_columns];
     for (int i = 0; i < total_num_columns; i++)
         copy->reach_probs[i] = this->reach_probs[i];
 

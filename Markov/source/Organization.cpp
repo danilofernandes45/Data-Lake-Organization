@@ -166,7 +166,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
 {
     State *current, *parent;
     queue<State*> outdated_states;
-    vector<State*> *new_parents, *grandpa_children;
+    vector<State*> *new_parents, *grandpa_children, deleted_states;
     vector<State*>::iterator iter;
     for (int i = 0; i < this->all_states[level].size(); i++)
     {
@@ -215,33 +215,44 @@ void Organization::delete_parent(int level, int level_id, int update_id)
         if( this->all_states[level-1][i]->children.size() == 0 )
             this->all_states[level].push_back( this->all_states[level-1][i] );
     }
-    this->all_states.erase(all_states.begin() + level - 1);
+
+    deleted_states = this->all_states[level-1];
+    this->all_states.erase(this->all_states.begin() + level - 1);
     this->update_effectiveness();
 
     for (int i = level-1; i < this->all_states.size(); i++)
         sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
+
 }
 
 void Organization::add_parent(int level, int level_id, int update_id)
 {
     State *current = this->all_states[level][level_id];
     vector <State*> *candidates = &this->all_states[level-1];
-    int min_level;
+    State *best_candidate = NULL;
+    int min_level = -1;
 
     for( int i = candidates->size()-1; i >= 0; i--)
     {
         if( find(current->parents.begin(), current->parents.end(), (*candidates)[i]) ==  current->parents.end() ){
-            current->parents.push_back( (*candidates)[i] );
-            (*candidates)[i]->children.push_back(current);
-            break;
+            if( best_candidate == NULL )
+                best_candidate = (*candidates)[i];
+            else if ( (*candidates)[i]->overall_reach_prob > best_candidate->overall_reach_prob )
+                best_candidate = (*candidates)[i];
         } 
     }
-    min_level = Organization::update_ancestors(current, this->instance, this->gamma, update_id);
 
-    for (int i = min_level; i < this->all_states.size(); i++)
-        sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
+    if( best_candidate != NULL ){
+        current->parents.push_back( best_candidate );
+        best_candidate->children.push_back(current);
+        min_level = Organization::update_ancestors(current, this->instance, this->gamma, update_id);
 
-    this->update_effectiveness();
+        for (int i = min_level; i < this->all_states.size(); i++)
+            sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
+
+        this->update_effectiveness();
+    }
+
 }
 
 //IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL

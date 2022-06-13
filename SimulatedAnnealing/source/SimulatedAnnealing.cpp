@@ -26,6 +26,8 @@ void print_organization(Organization *org)
             for(int k = 0; k < org->all_states[i][j]->children.size(); k++)
                 cout << org->all_states[i][j]->children[k]->abs_column_id << " ";
             cout << "\n";
+
+            cout << "Overall reach probs " << org->all_states[i][j]->overall_reach_prob << endl;
         }
         
     }
@@ -56,11 +58,12 @@ void perturbation(Organization *org, int update_id)
         }
     }
 
-    H_n = 0;
+    H_n = 0.0;
     for(int i = 0; i < org->all_states[level].size(); i++)
         H_n = H_n + ( 1 / org->all_states[level][i]->overall_reach_prob );
 
     //RANDOM SELECTION OF LEVEL (ROULLETE WHEEL)
+    sum = 0.0;
     x = distribution(generator) * H_n;
     for(int i = 0; i < org->all_states[level].size(); i++) {
         sum = sum + ( 1 / org->all_states[level][i]->overall_reach_prob );
@@ -117,13 +120,13 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
 }
 
 Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, int max_iter, float alpha, int K_max) {
-    Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
-    Organization *best_org = org;
+    Organization *best_org = NULL;
     Organization *new_org;
     for (int i = 0; i < num_restarts; i++)
     {
-        new_org = simulated_annealing(org, max_iter, alpha, K_max);
-        if( new_org->effectiveness > best_org->effectiveness )
+        new_org = Organization::generate_organization_by_clustering(instance, gamma);
+        new_org = simulated_annealing(new_org, max_iter, alpha, K_max);
+        if( best_org == NULL || new_org->effectiveness > best_org->effectiveness )
             best_org = new_org;
     }
     return best_org;    
@@ -132,7 +135,7 @@ Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, i
 int main()
 {
     Instance * instance = Instance::read_instance();
-    float gamma = 10.0;
+    float gamma = 1.0;
     Organization *org;
 
     //PERFORMANCE EVALUATION
@@ -152,7 +155,7 @@ int main()
     // org = iterated_local_search(instance, gamma, 5);
 
     // org = simulated_annealing(org, 30, 0.001, 100);
-    org = multistart_sa(instance, gamma, 25, 30, 0.001, 25);
+    org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
 
     time(&end);
 

@@ -67,7 +67,7 @@ void Organization::compute_all_reach_probs()
 {
     this->root->level = 0;
     this->root->overall_reach_prob = 1.0;
-    this->root->reach_probs = new float[this->instance->total_num_columns];
+    this->root->reach_probs = new double[this->instance->total_num_columns];
     for (int i = 0; i < this->instance->total_num_columns; i++)
         this->root->reach_probs[i] = 1.0;
 
@@ -565,7 +565,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
 
             state->abs_column_id = count;
             state->update_id = -1;
-            state->reach_probs = new float[inst->total_num_columns];
+            state->reach_probs = new double[inst->total_num_columns];
             state->domain = new int[inst->total_num_columns];
             state->domain[count] = 1;
             count++;
@@ -614,6 +614,11 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     int cluster_id = inst->total_num_columns; // MATRIX ID OF THE NEXT CLUSTER THAT WILL BE CREATED
     float diff_dists;
 
+    //GENERATOR OF RANDOM NUMBERS
+    random_device rand_dev;
+    mt19937 generator(rand_dev());
+    uniform_real_distribution<double> distribution(0.0, 1.0);
+
     //WHILE THERE ARE CLUSTERS TO MERGE 
     while(stack != NULL)
     {
@@ -640,7 +645,10 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
         //CHECK IF A PAIR OF RNN WERE FOUND
         diff_dists = 1.0;
         if( stack->is_NN_of != NULL ){
-            diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
+            if( 2 * distribution(generator) < ( 2 - dist_matrix[stack->id][stack->is_NN_of->id] ) )
+                diff_dists = -1.0;
+            else
+                diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
         }
         if( diff_dists < 0 || ( diff_dists == 0 && stack->is_NN_of->id < nn->id ) )
         {

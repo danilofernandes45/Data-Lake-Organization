@@ -2,6 +2,7 @@
 #define ORGANIZATION_HPP
 
 #include "Cluster.hpp"
+#include "Modification.hpp"
 #include <algorithm>
 
 #define DEBUG 0

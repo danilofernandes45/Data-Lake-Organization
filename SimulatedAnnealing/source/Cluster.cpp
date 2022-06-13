@@ -18,7 +18,7 @@ Cluster* Cluster::init_clusters(Instance * inst)
             state->sum_vector = inst->tables[i]->sum_vectors[j];
             state->sample_size = inst->tables[i]->nrows;
             state->similarities = new float[inst->total_num_columns];
-            state->reach_probs = new float[inst->total_num_columns];
+            state->reach_probs = new double[inst->total_num_columns];
             state->domain = new int[inst->total_num_columns];
             state->domain[id] = 1;
 
@@ -115,7 +115,7 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
 
     new_state->update_id = -1;
     new_state->abs_column_id = -cluster_id; //NEGATIVE ID: A NON-LEAF STATE
-    new_state->reach_probs = new float[inst->total_num_columns];
+    new_state->reach_probs = new double[inst->total_num_columns];
     new_state->sample_size = state_1->sample_size + state_2->sample_size;
     new_state->children.push_back(state_1);
     new_state->children.push_back(state_2);

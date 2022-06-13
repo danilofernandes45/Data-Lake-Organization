@@ -11,8 +11,8 @@ class State
         float *sum_vector; //SUM VECTOR REPRESENTATION OF THE STATE
         int sample_size;  // NUMBER OF VALUES (WORD VECTORS) UNDER ITS DOMAIN
         int level;        // THE SHORTEST PATH LENGTH FROM THE ROOT
-        float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
-        float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
+        double *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
+        double overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
         vector<State*> parents;
         vector<State*> children;
         float *similarities; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL

@@ -81,7 +81,7 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
             else
                 count = 0;
             //UPDATE ORGANIZATION
-            org = new_org;
+            org = new_org->copy();
             level = 2;
             level_id = 0;
             update_id++; 
@@ -90,7 +90,7 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
             // cout << distribution(generator) << ", " << prob_accept << endl;
             if(  distribution(generator) < prob_accept )
             {
-                org = new_org;
+                org = new_org->copy();
                 level = 2;
                 level_id = 0;
                 update_id++;
@@ -109,7 +109,8 @@ int main()
 {
     Instance * instance = Instance::read_instance();
     float gamma = 1.0;
-    Organization *org;
+    int K_max = 10;
+    Organization *org, *new_org, *best_org = NULL;
 
     //PERFORMANCE EVALUATION
     time_t start, end;
@@ -119,11 +120,16 @@ int main()
     time(&start);
 
     org = Organization::generate_organization_by_clustering(instance, gamma);
-    org = local_search(org, 50, 0.001);
+    for (int i = 0; i < K_max; i++)
+    {
+        new_org = local_search(org, 40, 0.05);
+        if( best_org == NULL || new_org->effectiveness > best_org->effectiveness )
+            best_org = new_org;
+    }
 
     time(&end);
 
-    cout << org->effectiveness << ", " << difftime(end, start) << "\n";
+    cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(end, start) << "\n";
 
     return 0;
 }
