@@ -63,6 +63,48 @@ void Organization::update_effectiveness()
     this->effectiveness /= this->instance->num_tables; 
 }
 
+void Organization::success_probabilities()
+{
+    State *leaf, *sim_leaf;
+    int table_id;
+    float column_success;
+    vector<double> tables_success_probs;
+
+    sort(this->leaves.begin(), this->leaves.end(), State::compare_id);
+
+    for (int i = 0; i < this->instance->num_tables; i++)
+        tables_success_probs.push_back(1.0);
+
+    for (int i = 0; i < this->leaves.size(); i++)
+    {   
+        leaf = this->leaves[i];
+        column_success = 1;
+
+        for(int j = 0; j < this->leaves.size(); j++)
+        {
+            if(leaf->similarities[j] >= 0.9) {
+                sim_leaf = this->leaves[j];
+                column_success *= ( 1 - sim_leaf->reach_probs[j] );
+            }
+        }
+
+        table_id = this->instance->map[leaf->abs_column_id][0];
+        tables_success_probs[table_id] *= column_success;
+    }
+
+    for (int i = 0; i < this->instance->num_tables; i++){
+        tables_success_probs[i] = 1 - tables_success_probs[i];
+    }
+
+    sort(tables_success_probs.begin(), tables_success_probs.end());
+
+    for (int i = 0; i < this->instance->num_tables; i++){
+        cout << tables_success_probs[i] << " ";
+    }
+    cout << endl;
+    
+}
+
 void Organization::compute_all_reach_probs()
 {
     this->root->level = 0;

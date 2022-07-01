@@ -8,6 +8,10 @@ bool State::compare(const State *state_1, const State *state_2) {
     return state_1->overall_reach_prob < state_2->overall_reach_prob; 
 }
 
+bool State::compare_id(const State *state_1, const State *state_2) {
+    return state_1->abs_column_id < state_2->abs_column_id; 
+}
+
 void State::destroy()
 {
     delete [] this->sum_vector; //SUM VECTOR REPRESENTATION OF THE STATE

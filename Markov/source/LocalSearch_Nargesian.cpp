@@ -131,5 +131,7 @@ int main()
 
     cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(end, start) << "\n";
 
+    best_org->success_probabilities();
+
     return 0;
 }

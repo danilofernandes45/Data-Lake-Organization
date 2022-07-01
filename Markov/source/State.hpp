@@ -25,6 +25,7 @@ class State
         void destroy();
 
         static bool compare(const State *state_1, const State *state_2);
+        static bool compare_id(const State *state_1, const State *state_2);
         // static bool compare_level(const State& state_1, const State& state_2);
 };
 

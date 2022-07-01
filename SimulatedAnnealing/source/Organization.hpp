@@ -22,6 +22,7 @@ class Organization
         void init_all_states();
         void update_all_states(int level);
         void update_effectiveness();
+        void success_probabilities();
         Organization* copy();
         vector<State*> delete_parent(int level, int level_id, int update_id);
         int add_parent(int level, int level_id, int update_id);

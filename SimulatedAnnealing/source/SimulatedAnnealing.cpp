@@ -145,7 +145,7 @@ int main()
 
     // org = Organization::generate_basic_organization(instance, gamma);
     // cout << org->effectiveness << " " << org->all_states.size() << endl;
-    org = Organization::generate_organization_by_clustering(instance, gamma);
+    // org = Organization::generate_organization_by_clustering(instance, gamma);
     // cout << org->effectiveness << " " << org->all_states.size() << endl;
     // org = Organization::generate_organization_by_heuristic(instance, gamma);
     // cout << org->effectiveness << " " << org->all_states.size() << endl;
@@ -160,6 +160,8 @@ int main()
     time(&end);
 
     cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(end, start) << "\n";
+
+    org->success_probabilities();
 
     return 0;
 }
