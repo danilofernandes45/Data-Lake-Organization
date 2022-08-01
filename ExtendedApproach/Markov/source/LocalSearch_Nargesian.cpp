@@ -16,13 +16,13 @@ void print_organization(Organization *org)
     {
         for (int j = 0; j < org->all_states[i].size(); j++)
         {
-            cout << org->all_states[i][j]->abs_column_id << " (" << org->all_states[i][j]->level << ")\nParents => ";
+            cout << org->all_states[i][j]->topic_id << " (" << org->all_states[i][j]->level << ")\nParents => ";
             for(int k = 0; k < org->all_states[i][j]->parents.size(); k++)
-                cout << org->all_states[i][j]->parents[k]->abs_column_id << " ";
+                cout << org->all_states[i][j]->parents[k]->topic_id << " ";
             
             cout << "\nChildren => ";
             for(int k = 0; k < org->all_states[i][j]->children.size(); k++)
-                cout << org->all_states[i][j]->children[k]->abs_column_id << " ";
+                cout << org->all_states[i][j]->children[k]->topic_id << " ";
             cout << "\n";
         }
         
@@ -122,7 +122,7 @@ int main()
     org = Organization::generate_organization_by_clustering(instance, gamma);
     for (int i = 0; i < K_max; i++)
     {
-        new_org = local_search(org, 40, 0.05);
+        new_org = local_search(org, 30, 0.05);
         if( best_org == NULL || new_org->effectiveness > best_org->effectiveness )
             best_org = new_org;
     }

@@ -10,19 +10,24 @@ class Table
     public:
         int nrows; //NUMBER OF ROWS
         int ncols; //NUMBER OF COLUMNS
-        // EACH COLUMN IS REPRESENTED BY A SUM VECTOR. SUM VECTOR = nrows * TOPIC VECTOR
-        // A TOPIC VECTOR IS THE MEAN OF WORD EMBEDDING VECTORS OF A COLUMN VALUES
-        float **sum_vectors; 
+        //EACH ROW OF topic_ids CORRESPONDS TO A TABLE COLUMN 
+        // WHICH IS MAPPED INTO A SET OF TOPICS. topic_ids STORES ITS IDS IN topic_vectors
+        int **topic_ids; 
 };
 
 class Instance
 {
     public:
-        int num_tables; //NUMBER OF TABLES INTO DATA LAKE
-        int total_num_columns; // TOTAL NUMBER OF COLUMNS
+        int total_num_topics; //NUMBER OF TOPICS IN DL
         int embedding_dim; // WORD VECTOR EMBEDDING DIMENSION
+        float **topic_vectors; //WORD EMBEDDING REPRESENTATION OF EACH TOPIC FOUND IN THE DL
+
+        int num_tables; //NUMBER OF TABLES INTO DATA LAKE
+        int num_topics_per_column; //NUMBER OF TOPICS EXTRACTED FROM EACH COLUMN
+        // int total_num_columns; // TOTAL NUMBER OF COLUMNS
         Table **tables; // TABLES FROM DATA LAKE
-        int **map; // MAP ABSOLUTE (IN DL) IN RELATIVE (IN ITS TABLE) COLUMN ID
+        // int **map; // MAP ABSOLUTE (IN DL) IN RELATIVE (IN ITS TABLE) COLUMN ID
+
         static Instance* read_instance();
 };
 

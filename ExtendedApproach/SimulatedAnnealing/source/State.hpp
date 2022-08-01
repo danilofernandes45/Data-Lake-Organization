@@ -17,7 +17,7 @@ class State
         vector<State*> children;
         float *similarities; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL
         int *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
-        int abs_column_id; //ABSOLUTE COLUMN ID (ONLY FOR LEAF NODES)
+        int topic_id; //ABSOLUTE COLUMN ID (ONLY FOR LEAF NODES)
         int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED TO AVOID RECOMPUTATIONS IN THE DAG
 
         void update_reach_probs(float gamma, int total_num_columns);

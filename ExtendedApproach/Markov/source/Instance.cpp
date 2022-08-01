@@ -3,12 +3,18 @@
 Instance* Instance::read_instance()
 {
     Instance *instance = new Instance;
+    scanf("%d %d", &instance->total_num_topics, &instance->embedding_dim);
+    instance->topic_vectors = new float*[instance->total_num_topics];
 
-    scanf("%d %d", &instance->num_tables, &instance->embedding_dim);
-    instance->total_num_columns = 0;
+    for (int i = 0; i < instance->total_num_topics; i++)
+    {
+        instance->topic_vectors[i] = new float[instance->embedding_dim];
+        for (int d = 0; d < instance->embedding_dim; d++)
+            scanf("%f", &instance->topic_vectors[i][d]);
+    }
+    
+    scanf("%d %d", &instance->num_tables, &instance->num_topics_per_column);
     instance->tables = new Table*[instance->num_tables];
-
-    instance->num_tables = min(50, instance->num_tables);
 
     Table *table;
 
@@ -18,43 +24,26 @@ Instance* Instance::read_instance()
         instance->tables[i] = table;
 
         scanf("%d %d", &table->nrows, &table->ncols);
-        instance->total_num_columns += table->ncols;
-        table->sum_vectors = new float*[table->nrows];
+        table->topic_ids = new int*[table->ncols];
 
         for (int j = 0; j < table->ncols; j++)
         {
-            table->sum_vectors[j] = new float[instance->embedding_dim];
-            for (int d = 0; d < instance->embedding_dim; d++)
-                scanf("%f", &table->sum_vectors[j][d]);
+            table->topic_ids[j] = new int[instance->num_topics_per_column];
+            for (int d = 0; d < instance->num_topics_per_column; d++)
+                scanf("%d", &table->topic_ids[j][d]);
         }
     }
 
     //GENERATE MAP ABSOLUTE ID -> RELATIVE ID
-    instance->map = new int*[instance->total_num_columns];
-    int count = 0;
-    for (int i = 0; i < instance->num_tables; i++)
-    {
-        for (int j = 0; j < instance->tables[i]->ncols; j++){
-            instance->map[count] = new int[2];
-            instance->map[count][0] = i;
-            instance->map[count][1] = j;
-            count++;
-        }
-    }
-
-    // printf("%d %d %d\n", instance.num_tables, instance.embedding_dim, instance.total_num_columns);
-    
-    // for (int i = 0; i < instance.num_tables; i++)
+    // instance->map = new int*[instance->total_num_columns];
+    // int count = 0;
+    // for (int i = 0; i < instance->num_tables; i++)
     // {
-    //     Table *table = instance.tables[i];
-
-    //     printf("%d %d\n", table->nrows, table->ncols);
-
-    //     for (int j = 0; j < table->ncols; j++)
-    //     {
-    //         for (int d = 0; d < instance.embedding_dim; d++)
-    //             printf("%f ", table->sum_vectors[j][d]); 
-    //         printf("\n");
+    //     for (int j = 0; j < instance->tables[i]->ncols; j++){
+    //         instance->map[count] = new int[2];
+    //         instance->map[count][0] = i;
+    //         instance->map[count][1] = j;
+    //         count++;
     //     }
     // }
 

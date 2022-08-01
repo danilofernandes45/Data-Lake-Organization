@@ -18,13 +18,13 @@ void print_organization(Organization *org)
     {
         for (int j = 0; j < org->all_states[i].size(); j++)
         {
-            cout << org->all_states[i][j]->abs_column_id << " (" << org->all_states[i][j]->level << ")\nParents => ";
+            cout << org->all_states[i][j]->topic_id << " (" << org->all_states[i][j]->level << ")\nParents => ";
             for(int k = 0; k < org->all_states[i][j]->parents.size(); k++)
-                cout << org->all_states[i][j]->parents[k]->abs_column_id << " ";
+                cout << org->all_states[i][j]->parents[k]->topic_id << " ";
             
             cout << "\nChildren => ";
             for(int k = 0; k < org->all_states[i][j]->children.size(); k++)
-                cout << org->all_states[i][j]->children[k]->abs_column_id << " ";
+                cout << org->all_states[i][j]->children[k]->topic_id << " ";
             cout << "\n";
 
             cout << "Overall reach probs " << org->all_states[i][j]->overall_reach_prob << endl;
@@ -155,7 +155,7 @@ int main()
     // org = iterated_local_search(instance, gamma, 5);
 
     // org = simulated_annealing(org, 30, 0.001, 100);
-    org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
+    org = multistart_sa(instance, gamma, 20, 30, 0.001, 20);
 
     time(&end);
 

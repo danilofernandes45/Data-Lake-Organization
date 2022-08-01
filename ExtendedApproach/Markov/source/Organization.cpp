@@ -16,49 +16,26 @@ void Organization::destroy()
 
 void Organization::update_effectiveness()
 {
-    State *leaf;
-    int table_id;
-    float *tables_discover_probs = new float[this->instance->num_tables];
-
-    for (int i = 0; i < this->instance->num_tables; i++)
-        tables_discover_probs[i] = 1.0;
-
-    #if DEBUG
-    cout << "Columns Overall Reach Probs: ";
-    for (int i = 0; i < this->leaves.size(); i++)
-    {
-        leaf = this->leaves[i];
-        cout << leaf->overall_reach_prob << " (" << leaf->abs_column_id << ") ";
-    }
-
-    cout << "\nColumns Discover Probs: ";
-    #endif
-
-    for (int i = 0; i < this->leaves.size(); i++)
-    {   
-        leaf = this->leaves[i];
-        table_id = this->instance->map[leaf->abs_column_id][0];
-        tables_discover_probs[table_id] *= ( 1 - leaf->reach_probs[leaf->abs_column_id] );
-
-        #if DEBUG
-        cout << leaf->reach_probs[leaf->abs_column_id] << " (" << leaf->abs_column_id << ") ";
-        #endif
-    }
-    #if DEBUG
-    cout << "\nTables Discover Probs: ";
-    #endif
+    int top_id;
+    float prob_table, prob_column;
 
     this->effectiveness = 0.0;
-    for (int i = 0; i < this->instance->num_tables; i++){
-        this->effectiveness += 1 - tables_discover_probs[i];
 
-        #if DEBUG
-        cout << 1 - tables_discover_probs[i] << " ";
-        #endif
+    for(int t = 0; t < this->instance->num_tables; t++)
+    {
+        prob_table = 1.0;
+        for(int c = 0; c < this->instance->tables[t]->ncols; c++)
+        {
+            prob_column = 1.0;
+            for(int i = 0; i < this->instance->num_topics_per_column; i++)
+            {
+                top_id = this->instance->tables[t]->topic_ids[c][i];
+                prob_column *= ( 1 - this->leaves[top_id]->reach_probs[top_id] );
+            }
+            prob_table *= prob_column;
+        }
+        this->effectiveness += ( 1 - prob_table );
     }
-    #if DEBUG
-    cout << "\n\n";
-    #endif
 
     this->effectiveness /= this->instance->num_tables; 
 }
@@ -67,16 +44,17 @@ void Organization::compute_all_reach_probs()
 {
     this->root->level = 0;
     this->root->overall_reach_prob = 1.0;
-    this->root->reach_probs = new float[this->instance->total_num_columns];
-    for (int i = 0; i < this->instance->total_num_columns; i++)
+    this->root->reach_probs = new double[this->instance->total_num_topics];
+    for (int i = 0; i < this->instance->total_num_topics; i++)
         this->root->reach_probs[i] = 1.0;
 
-    Organization::update_descendants(this->root, this->gamma, this->instance->total_num_columns, 0);
+    Organization::update_descendants(this->root, this->gamma, this->instance->total_num_topics, 0);
 }
 
 //INITIALIZE all_states, CONSIDERING THAT ALL STATES HAVE ONLY ONE PARENT
 void Organization::init_all_states()
 {
+    this->leaves = vector<State*>(this->instance->total_num_topics);
     queue<State*> queue;
     queue.push(this->root);
     State* current;
@@ -91,13 +69,13 @@ void Organization::init_all_states()
             for (int i = 0; i < current->children.size(); i++)
                 queue.push(current->children[i]);
         } else {
-            this->leaves.push_back(current);
+            this->leaves[current->topic_id] = current;
         }
         //ADD states_level IN all_states, IF IT'S NECESSARY
         if( current_level < current->level ){
 
             // for (int i = 0; i < states_level->size(); i++)
-            //     cout << (*states_level)[i]->abs_column_id << " ";
+            //     cout << (*states_level)[i]->topic_id << " ";
             // cout << "\n";
 
             sort( states_level->begin(), states_level->end(), State::compare );
@@ -110,7 +88,7 @@ void Organization::init_all_states()
     }
 
     // for (int i = 0; i < states_level->size(); i++)
-    //     cout << (*states_level)[i]->abs_column_id << " ";
+    //     cout << (*states_level)[i]->topic_id << " ";
     // cout << "\n";
 
     sort( states_level->begin(), states_level->end(), State::compare );
@@ -131,20 +109,21 @@ Organization* Organization::copy()
     copy->instance = this->instance;
     copy->gamma = this->gamma;
     copy->effectiveness = this->effectiveness;
+    copy->leaves = vector<State*>(this->instance->total_num_topics);
 
     State *copied_state;
     for(int i = 0; i < this->all_states.size(); i++)
     {
         vector<State*> states;
         for (int j = 0; j < this->all_states[i].size(); j++){
-            copied_state = this->all_states[i][j]->copy(this->instance->total_num_columns, this->instance->embedding_dim);
+            copied_state = this->all_states[i][j]->copy(this->instance->total_num_topics, this->instance->embedding_dim);
             //ADD TRANSITIONS PARENT-CHILD
             //UNDER CONSIDERATION THAT ALL PARENTS ARE IN PREVIOUS LEVEL
             for (int k = 0; k < this->all_states[i][j]->parents.size(); k++)
             {
                 for (int l = 0; l < copy->all_states[i-1].size(); l++)
                 {
-                    if( this->all_states[i][j]->parents[k]->abs_column_id == copy->all_states[i-1][l]->abs_column_id ) {
+                    if( this->all_states[i][j]->parents[k]->topic_id == copy->all_states[i-1][l]->topic_id ) {
                         copied_state->parents.push_back( copy->all_states[i-1][l] );
                         copy->all_states[i-1][l]->children.push_back( copied_state );
                         break;
@@ -153,10 +132,11 @@ Organization* Organization::copy()
             }
             states.push_back( copied_state );
             if( this->all_states[i][j]->children.size() == 0 )
-                copy->leaves.push_back(copied_state);
+                copy->leaves[copied_state->topic_id] = copied_state;
         }
         copy->all_states.push_back(states);
     }
+
     copy->root = copy->all_states[0][0];
 
     return copy; 
@@ -181,9 +161,9 @@ void Organization::delete_parent(int level, int level_id, int update_id)
                 {
                     grandpa_children = &parent->parents[k]->children;
 
-                    // cout << "Parent " << parent->abs_column_id << "\n";
+                    // cout << "Parent " << parent->topic_id << "\n";
                     // for (int t = 0; t < grandpa_children->size(); t++)
-                    //     cout << (*grandpa_children)[t]->abs_column_id << " ";
+                    //     cout << (*grandpa_children)[t]->topic_id << " ";
                     // cout << "\n";
 
                     iter = find(grandpa_children->begin(), grandpa_children->end(), parent);
@@ -191,7 +171,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
                         grandpa_children->erase(iter);
 
                     // for (int t = 0; t < grandpa_children->size(); t++)
-                    //     cout << (*grandpa_children)[t]->abs_column_id << " ";
+                    //     cout << (*grandpa_children)[t]->topic_id << " ";
                     // cout << "\n";
                     
                     grandpa_children->push_back(current);
@@ -206,7 +186,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     {
         current = outdated_states.front();
         outdated_states.pop();
-        Organization::update_descendants(current, this->gamma, this->instance->total_num_columns, update_id);
+        Organization::update_descendants(current, this->gamma, this->instance->total_num_topics, update_id);
     }
     //UPDATE all_states
     // AVOID LOST LEAF STATES
@@ -257,7 +237,7 @@ void Organization::add_parent(int level, int level_id, int update_id)
 
 //IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL
 //UNDER THIS CONSIDERATION, A BREADTH-FIRST SEARCH CAN UPDATE ALL PARENTS BEFORE ITS CHILDREN
-void Organization::update_descendants(State *patriarch, float gamma, int total_num_columns, int update_id)
+void Organization::update_descendants(State *patriarch, float gamma, int total_num_topics, int update_id)
 {    
     queue<State*> queue; //QUEUE USED IN THE BREADTH-FIRST SEARCH
     queue.push(patriarch);
@@ -273,17 +253,17 @@ void Organization::update_descendants(State *patriarch, float gamma, int total_n
             //COMPUTE ITS REACHABILITY PROBABILITIES
             //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE IN THE SAME LEVEL
             if( current != patriarch )
-                current->update_reach_probs(gamma, total_num_columns);
+                current->update_reach_probs(gamma, total_num_topics);
 
             //<TEST!>
-            // printf("\nLevel: %d\nID: %d\n", current->level, current->abs_column_id);
+            // printf("\nLevel: %d\nID: %d\n", current->level, current->topic_id);
             // printf("Reach Probs\n");
-            // for (int t = 0; t < total_num_columns; t++)
+            // for (int t = 0; t < total_num_topics; t++)
             //     printf("%.3f ", current->reach_probs[t]);
             
             // printf("\nOverall reach prob: %.3f\n", current->overall_reach_prob);
-            // if(current->abs_column_id >= 0)
-            //     printf("Discover probability: %.3f\n", current->reach_probs[current->abs_column_id]);
+            // if(current->topic_id >= 0)
+            //     printf("Discover probability: %.3f\n", current->reach_probs[current->topic_id]);
             //</TEST!>
 
             //ADD ITS CHILDREN TO THE QUEUE
@@ -303,9 +283,8 @@ int Organization::update_ancestors(State *descendant, Instance *inst, float gamm
     priority_queue<State*, vector<State*>, CompareLevel> outdated_states;  
     //ITERATORS
     State *current;
-    int table_id, col_id, min_level;
+    int min_level;
     int has_changed = 1;
-    float *sum_vector_i;
 
     while( !queue.empty() ){
         //GET THE FIRST STATE FROM THE QUEUE 
@@ -316,16 +295,14 @@ int Organization::update_ancestors(State *descendant, Instance *inst, float gamm
         {
             has_changed = 0;
             //CHECK WHICH TOPICS NEED TO BE ADDED IN current's DOMAIN
-            for(int i = 0; i < inst->total_num_columns; i++)
+            for(int i = 0; i < inst->total_num_topics; i++)
             {
                 if(descendant->domain[i] == 1 && current->domain[i] == 0)
                 {
                     has_changed = 1;
                     current->domain[i] = 1;
-                    table_id = inst->map[i][0];
-                    col_id = inst->map[i][1];
                     for(int d = 0; d < inst->embedding_dim; d++)
-                        current->sum_vector[d] += inst->tables[table_id]->sum_vectors[col_id][d];
+                        current->sum_vector[d] += inst->topic_vectors[i][d];
                 }
             }
         }
@@ -333,13 +310,8 @@ int Organization::update_ancestors(State *descendant, Instance *inst, float gamm
         if( has_changed == 1 )
         {
             //UPDATE SIMILARITIES
-            for (int i = 0; i < inst->total_num_columns; i++)
-            {
-                table_id = inst->map[i][0];
-                col_id = inst->map[i][1];
-                sum_vector_i = inst->tables[table_id]->sum_vectors[col_id];
-                current->similarities[i] = cossine_similarity(current->sum_vector, sum_vector_i, inst->embedding_dim);
-            }
+            for (int i = 0; i < inst->total_num_topics; i++)
+                current->similarities[i] = cossine_similarity(current->sum_vector, inst->topic_vectors[i], inst->embedding_dim);
             
             //ITS PARENTS NEED TO BE VERIFIED
             for(int i = 0; i < current->parents.size(); i++)
@@ -358,7 +330,7 @@ int Organization::update_ancestors(State *descendant, Instance *inst, float gamm
         outdated_states.pop();
         if( current->update_id != update_id )
         {
-            current->update_reach_probs(gamma, inst->total_num_columns);
+            current->update_reach_probs(gamma, inst->total_num_topics);
             current->update_id = update_id;
             for(int i = 0; i < current->children.size(); i++)
                 outdated_states.push(current->children[i]);
@@ -378,40 +350,35 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
     //Root node creation
     org->root = new State;
     org->root->update_id = -1;
-    org->root->abs_column_id = -inst->total_num_columns;
+    org->root->topic_id = -inst->total_num_topics;
     org->root->sum_vector = new float[inst->embedding_dim]; // VECTOR INITIALIZED WITH ZEROS
     org->root->sample_size = 0;
-    org->root->domain = new int[inst->total_num_columns];
-    for (int i = 0; i < inst->total_num_columns; i++)
+    org->root->domain = new int[inst->total_num_topics];
+    for (int i = 0; i < inst->total_num_topics; i++)
         org->root->domain[i] = 1;
 
     State *state;
-    int count = 0;
-
     //Leaf nodes (columns representation) creation
-    for (int i = 0; i < inst->num_tables; i++)
+    for (int i = 0; i < inst->total_num_topics; i++)
     {
-        org->root->sample_size += inst->tables[i]->nrows * inst->tables[i]->ncols;
+        state = new State;
+        state->topic_id = i;
+        state->update_id = -1;
+        state->reach_probs = new double[inst->total_num_topics];
+        state->domain = new int[inst->total_num_topics];
+        state->domain[i] = 1;
 
-        for (int j = 0; j < inst->tables[i]->ncols; j++)
-        {
-            state = new State;
+        state->parents.push_back( org->root );
+        state->sum_vector = inst->topic_vectors[i];
+        //root sum vector incrementation 
+        for (int d = 0; d < inst->embedding_dim; d++)
+            org->root->sum_vector[d] += state->sum_vector[d];
+        //Adding the leaf to the organization as child of the root
+        org->root->children.push_back(state);
 
-            state->abs_column_id = count;
-            state->update_id = -1;
-            state->domain = new int[inst->total_num_columns];
-            state->domain[count] = 1;
-            count++;
-
-            state->parents.push_back( org->root );
-            state->sum_vector = inst->tables[i]->sum_vectors[j];
-            state->sample_size = inst->tables[i]->nrows;
-            //root sum vector incrementation 
-            for (int d = 0; d < inst->embedding_dim; d++)
-                org->root->sum_vector[d] += state->sum_vector[d];
-            //Adding the leaf to the organization as child of the root
-            org->root->children.push_back(state);
-        }   
+        state->similarities = new float[inst->total_num_topics];
+        for(int s=0; s < inst->total_num_topics; s++)
+            state->similarities[s] = cossine_similarity(state->sum_vector, inst->topic_vectors[s], inst->embedding_dim);   
     }
     org->compute_all_reach_probs();
     org->init_all_states();
@@ -431,7 +398,7 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     org->gamma = gamma;
 
     Cluster* active_clusters = Cluster::init_clusters(inst); // CHAINED LIST OF CLUSTERS AVAILABLE TO BE ADDED TO NN CHAIN
-    float** dist_matrix = Cluster::init_dist_matrix(active_clusters, inst->total_num_columns, inst->embedding_dim); // DISTANCE BETWEEN ALL CLUSTERS
+    float** dist_matrix = Cluster::init_dist_matrix(active_clusters, inst->total_num_topics, inst->embedding_dim); // DISTANCE BETWEEN ALL CLUSTERS
 
     Cluster *stack = active_clusters; //NEAREST NEIGHBORS CHAIN
     active_clusters = active_clusters->next; // REMOVE THE HEAD FROM CHAINED LIST AND ADD TO NN CHAIN
@@ -440,7 +407,7 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     Cluster *previous, *current; // ITERATORS
     Cluster *new_cluster;
 
-    int cluster_id = inst->total_num_columns; // MATRIX ID OF THE NEXT CLUSTER THAT WILL BE CREATED
+    int cluster_id = inst->total_num_topics; // MATRIX ID OF THE NEXT CLUSTER THAT WILL BE CREATED
     float diff_dists;
 
     //WHILE THERE ARE CLUSTERS TO MERGE 
