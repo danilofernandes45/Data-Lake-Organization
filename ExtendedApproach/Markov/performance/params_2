@@ -1,4 +1,0 @@
-gamma=1.0
-num_restarts = 10
-max_iter = 30
-eps = 0.05

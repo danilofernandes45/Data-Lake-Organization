@@ -1,0 +1,7 @@
+Stocastic Hierarchical Clustering (Every iteration)
+gamma=1.0
+num_restarts = 10
+max_iter = 30
+alpha = 0.001
+K_max = 30
+T_min = alpha^10000

@@ -1,0 +1,7 @@
+Stocastic Hierarchical Clustering (Once)
+gamma=1.0
+num_restarts = 25
+max_iter = 10
+alpha = 0.001
+K_max = 25
+T_min = alpha^10000

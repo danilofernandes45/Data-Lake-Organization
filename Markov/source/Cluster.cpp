@@ -21,18 +21,21 @@ Cluster* Cluster::init_clusters(Instance * inst)
             state->reach_probs = new float[inst->total_num_columns];
             state->domain = new int[inst->total_num_columns];
             state->domain[id] = 1;
+            
+            if (inst->tables[i]->tags_cols == NULL && inst->tables[i]->tags_table == NULL )
+            {
+                current = new Cluster;
+                current->state = state;
+                current->id = id;
+                current->cardinality = 1;
 
-            current = new Cluster;
-            current->state = state;
-            current->id = id;
-            current->cardinality = 1;
+                if(active_clusters == NULL)
+                    active_clusters = current;
+                else
+                    previous->next = current;
 
-            if(active_clusters == NULL)
-                active_clusters = current;
-            else
-                previous->next = current;
-
-            previous = current;
+                previous = current;
+            }
             id++;
         }   
     }
