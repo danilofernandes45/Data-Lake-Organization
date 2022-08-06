@@ -3,10 +3,36 @@
 Cluster* Cluster::init_clusters(Instance * inst)
 {
     Cluster* active_clusters = NULL;
+    vector<State*> tags;
 
     int id = 0;
+    int tag_id;
     State *state;
     Cluster *current, *previous;
+
+    for (int i = 0; i < inst->num_tags; i++)
+    {
+        state = new State;
+        state->update_id = -1;
+        state->abs_column_id = -i-1;
+        state->sum_vector = new float[inst->embedding_dim];
+        state->similarities = new float[inst->total_num_columns];
+        state->reach_probs = new float[inst->total_num_columns];
+        state->domain = new int[inst->total_num_columns];
+        tags.push_back(state);
+
+        current = new Cluster;
+        current->state = state;
+        current->id = i+1;
+
+        if(active_clusters == NULL)
+            active_clusters = current;
+        else
+            previous->next = current;
+
+        previous = current;
+    }
+     
     //Leaf nodes (columns representation) creation
     for (int i = 0; i < inst->num_tables; i++)
     {
@@ -22,7 +48,7 @@ Cluster* Cluster::init_clusters(Instance * inst)
             state->domain = new int[inst->total_num_columns];
             state->domain[id] = 1;
             
-            if (inst->tables[i]->tags_cols == NULL && inst->tables[i]->tags_table == NULL )
+            if ( tags.empty() )
             {
                 current = new Cluster;
                 current->state = state;
@@ -35,7 +61,26 @@ Cluster* Cluster::init_clusters(Instance * inst)
                     previous->next = current;
 
                 previous = current;
+
+            } else if ( inst->tables[i]->tags_table.size() > 0){
+
+                for (int k = 0; k < inst->tables[i]->tags_table.size(); k++)
+                {
+                    tag_id = inst->tables[i]->tags_table[k];
+                    tags[tag_id]->children.push_back(state);
+                    state->parents.push_back(tags[tag_id]);
+                }
+                
+            } else {
+
+                for (int k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
+                {
+                    tag_id = inst->tables[i]->tags_cols[j][k];
+                    tags[tag_id]->children.push_back(state);
+                    state->parents.push_back(tags[tag_id]);
+                }
             }
+
             id++;
         }   
     }

@@ -10,8 +10,8 @@ class Table
     public:
         int nrows; //NUMBER OF ROWS
         int ncols; //NUMBER OF COLUMNS
-        int *tags_cols; // A VECTOR INDICATING THE TAGS IDs OF EACH COLUMN
-        int *tags_table; // A VECTOR INDICATING THE TAGS IDS RELATED TO THE TABLE
+        vector<vector<int>> tags_cols; // A VECTOR INDICATING THE TAGS IDs OF EACH COLUMN
+        vector<int> tags_table; // A VECTOR INDICATING THE TAGS IDS RELATED TO THE TABLE
         // EACH COLUMN IS REPRESENTED BY A SUM VECTOR. SUM VECTOR = nrows * TOPIC VECTOR
         // A TOPIC VECTOR IS THE MEAN OF WORD EMBEDDING VECTORS OF A COLUMN VALUES
         float **sum_vectors; 
