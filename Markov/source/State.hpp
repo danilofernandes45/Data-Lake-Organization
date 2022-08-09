@@ -3,6 +3,7 @@
 
 #include <bits/stdc++.h>
 #include<vector>
+#include "Instance.hpp"
 using namespace std;
 
 class State
@@ -24,6 +25,7 @@ class State
         State* copy(int total_num_columns, int embedding_dim);
         void destroy();
 
+        static State* build(Instance *inst, int id, int i, int j);
         static bool compare(const State *state_1, const State *state_2);
         static bool compare_id(const State *state_1, const State *state_2);
         // static bool compare_level(const State& state_1, const State& state_2);

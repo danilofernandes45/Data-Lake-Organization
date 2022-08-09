@@ -1,5 +1,17 @@
 #include "Cluster.hpp"
 
+void add_parenthood(State *parent, State *child, int embedding_dim)
+{
+    parent->domain[child->abs_column_id] = 1;
+
+    parent->children.push_back(child);
+    child->parents.push_back(parent);
+
+    for(int i = 0; i < embedding_dim; i++) {
+        parent->sum_vector[i] += child->sum_vector[i];
+    }
+}
+
 Cluster* Cluster::init_clusters(Instance * inst)
 {
     Cluster* active_clusters = NULL;
@@ -10,15 +22,17 @@ Cluster* Cluster::init_clusters(Instance * inst)
     State *state;
     Cluster *current, *previous;
 
+    //Create non-leaf nodes with tags, when they exists
     for (int i = 0; i < inst->num_tags; i++)
     {
-        state = new State;
-        state->update_id = -1;
-        state->abs_column_id = -i-1;
-        state->sum_vector = new float[inst->embedding_dim];
-        state->similarities = new float[inst->total_num_columns];
-        state->reach_probs = new float[inst->total_num_columns];
-        state->domain = new int[inst->total_num_columns];
+        // state = new State;
+        // state->update_id = -1;
+        // state->abs_column_id = -i-1;
+        // state->sum_vector = new float[inst->embedding_dim];
+        // state->similarities = new float[inst->total_num_columns];
+        // state->reach_probs = new float[inst->total_num_columns];
+        // state->domain = new int[inst->total_num_columns];
+        state = State::build(inst, -i-1, -1, -1);
         tags.push_back(state);
 
         current = new Cluster;
@@ -38,15 +52,17 @@ Cluster* Cluster::init_clusters(Instance * inst)
     {
         for (int j = 0; j < inst->tables[i]->ncols; j++)
         {
-            state = new State;
-            state->update_id = -1;
-            state->abs_column_id = id;
-            state->sum_vector = inst->tables[i]->sum_vectors[j];
-            state->sample_size = inst->tables[i]->nrows;
-            state->similarities = new float[inst->total_num_columns];
-            state->reach_probs = new float[inst->total_num_columns];
-            state->domain = new int[inst->total_num_columns];
-            state->domain[id] = 1;
+            // state = new State;
+            // state->update_id = -1;
+            // state->abs_column_id = id;
+            // state->sum_vector = inst->tables[i]->sum_vectors[j];
+            // state->sample_size = inst->tables[i]->nrows;
+            // state->similarities = new float[inst->total_num_columns];
+            // state->reach_probs = new float[inst->total_num_columns];
+            // state->domain = new int[inst->total_num_columns];
+            // state->domain[id] = 1;
+
+            state = State::build(inst, id, i, j);
             
             if ( tags.empty() )
             {
@@ -67,8 +83,7 @@ Cluster* Cluster::init_clusters(Instance * inst)
                 for (int k = 0; k < inst->tables[i]->tags_table.size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_table[k];
-                    tags[tag_id]->children.push_back(state);
-                    state->parents.push_back(tags[tag_id]);
+                    add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
                 
             } else {
@@ -76,11 +91,9 @@ Cluster* Cluster::init_clusters(Instance * inst)
                 for (int k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_cols[j][k];
-                    tags[tag_id]->children.push_back(state);
-                    state->parents.push_back(tags[tag_id]);
+                    add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
             }
-
             id++;
         }   
     }
@@ -141,16 +154,16 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
     State *state_2 = stack->is_NN_of->state;
 
     //CREATE A NEW STATE IN THE ORGANIZATION WHICH WILL BE PARENT OF RNN STATES
-    State *new_state = new State;
+    State *new_state = State::build(inst, -cluster_id, -1, -1);
 
-    new_state->sum_vector = new float[inst->embedding_dim];
+    // new_state->sum_vector = new float[inst->embedding_dim];
     for (int i = 0; i < inst->embedding_dim; i++)
         new_state->sum_vector[i] = state_1->sum_vector[i] + state_2->sum_vector[i];
 
     int table_id;
     int col_id;
     float *sum_vector_i;
-    new_state->similarities = new float[inst->total_num_columns];    
+    // new_state->similarities = new float[inst->total_num_columns];    
 
     for (int i = 0; i < inst->total_num_columns; i++)
     {
@@ -161,17 +174,17 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
         
     }
 
-    new_state->update_id = -1;
-    new_state->abs_column_id = -cluster_id; //NEGATIVE ID: A NON-LEAF STATE
-    new_state->reach_probs = new float[inst->total_num_columns];
-    new_state->sample_size = state_1->sample_size + state_2->sample_size;
+    // new_state->update_id = -1;
+    // new_state->abs_column_id = -cluster_id; //NEGATIVE ID: A NON-LEAF STATE
+    // new_state->reach_probs = new float[inst->total_num_columns];
+    // new_state->sample_size = state_1->sample_size + state_2->sample_size;
     new_state->children.push_back(state_1);
     new_state->children.push_back(state_2);
 
     state_1->parents.push_back(new_state);
     state_2->parents.push_back(new_state);
 
-    new_state->domain = new int[inst->total_num_columns];
+    // new_state->domain = new int[inst->total_num_columns];
     for (int i = 0; i < inst->total_num_columns; i++)
         new_state->domain[i] = state_1->domain[i] | state_2->domain[i];
     

@@ -25,6 +25,26 @@ void State::destroy()
     delete this;
 }
 
+State* State::build(Instance *inst, int id, int i, int j)
+{
+    State *state = new State;
+    state->update_id = -1;
+    state->abs_column_id = id;
+    state->similarities = new float[inst->total_num_columns];
+    state->reach_probs = new float[inst->total_num_columns];
+    state->domain = new int[inst->total_num_columns];
+
+    if ( i >= 0 && j >= 0 ) {
+        state->sum_vector = inst->tables[i]->sum_vectors[j];
+        state->sample_size = inst->tables[i]->nrows;
+        state->domain[id] = 1;
+    } else {
+        state->sum_vector = new float[inst->embedding_dim];
+    }
+
+    return state;
+}
+
 State* State::copy(int total_num_columns, int embedding_dim)
 {
     State *copy = new State;
