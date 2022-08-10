@@ -32,12 +32,12 @@ Cluster* Cluster::init_clusters(Instance * inst)
         // state->similarities = new float[inst->total_num_columns];
         // state->reach_probs = new float[inst->total_num_columns];
         // state->domain = new int[inst->total_num_columns];
-        state = State::build(inst, -i-1, -1, -1);
+        state = State::build(inst, - inst->total_num_columns - i, -1, -1);
         tags.push_back(state);
 
         current = new Cluster;
         current->state = state;
-        current->id = i+1;
+        current->id = i;
 
         if(active_clusters == NULL)
             active_clusters = current;
@@ -78,16 +78,18 @@ Cluster* Cluster::init_clusters(Instance * inst)
 
                 previous = current;
 
-            } else if ( inst->tables[i]->tags_table.size() > 0){
+            } else {
 
+                state->compute_similarities(inst);
+
+                //IF THE TAGS ARE RELATE TO THE TABLE
                 for (int k = 0; k < inst->tables[i]->tags_table.size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_table[k];
                     add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
-                
-            } else {
 
+                //ELSE IF THE TAGS ARE RELATED TO THE COLUMNS   
                 for (int k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_cols[j][k];
@@ -100,13 +102,13 @@ Cluster* Cluster::init_clusters(Instance * inst)
     return active_clusters;
 }
 
-float** Cluster::init_dist_matrix(Cluster* active_clusters, int total_num_columns, int embedding_dim)
+float** Cluster::init_dist_matrix(Cluster* active_clusters, int num_clusters, int embedding_dim)
 {
-
     Cluster *cluster_i = active_clusters;
     Cluster *cluster_j;
 
-    int size = 2 * total_num_columns - 1;
+    int size = 2 * num_clusters - 1;
+    int id_i, id_j;
     float **dist_matrix = new float*[size];
     float similarity;
 
@@ -114,20 +116,29 @@ float** Cluster::init_dist_matrix(Cluster* active_clusters, int total_num_column
     for(int i = 0; i < size; i++)
         dist_matrix[i] = new float[size];
 
-    for(int i = 0; i < total_num_columns; i++)
+    for(int i = 0; i < num_clusters; i++)
     {
+        id_i = cluster_i->state->abs_column_id;
         cluster_j = cluster_i->next;
-        for(int j = i+1; j < total_num_columns; j++)
+
+        for(int j = i+1; j < num_clusters; j++)
         {
             similarity = cossine_similarity(cluster_i->state->sum_vector, cluster_j->state->sum_vector, embedding_dim);
-            cluster_i->state->similarities[ cluster_j->state->abs_column_id ] = similarity;
-            cluster_j->state->similarities[ cluster_i->state->abs_column_id ] = similarity;
+            
+            id_j = cluster_j->state->abs_column_id;
+            if( id_i >= 0 && id_j >= 0 ) {
+                cluster_i->state->similarities[ id_j ] = similarity;
+                cluster_j->state->similarities[ id_i ] = similarity;
+            }
 
             dist_matrix[i][j] = 1 - similarity;
             dist_matrix[j][i] = dist_matrix[i][j];
             cluster_j = cluster_j->next;
         }
-        cluster_i->state->similarities[ cluster_i->state->abs_column_id ] = 1.0;
+        if( id_i >= 0 )
+            cluster_i->state->similarities[ id_i ] = 1.0;
+        else
+            cluster_i->cardinality = cluster_i->state->children.size();
 
         // <TEST>
         // printf("ID: %d\n", cluster_i->state->abs_column_id);
@@ -142,7 +153,7 @@ float** Cluster::init_dist_matrix(Cluster* active_clusters, int total_num_column
 }
 
 //MERGE THE LAST TWO CLUSTER OF NN CHAIN AND ADD THE NEW CLUSTER INTO UNMERGED CLUSTERS LIST 
-Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, Instance *inst)
+Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, int state_id, Instance *inst)
 {
     int id_1 = stack->id;
     int id_2 = stack->is_NN_of->id;
@@ -154,25 +165,23 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
     State *state_2 = stack->is_NN_of->state;
 
     //CREATE A NEW STATE IN THE ORGANIZATION WHICH WILL BE PARENT OF RNN STATES
-    State *new_state = State::build(inst, -cluster_id, -1, -1);
+    State *new_state = State::build(inst, state_id, -1, -1);
 
     // new_state->sum_vector = new float[inst->embedding_dim];
     for (int i = 0; i < inst->embedding_dim; i++)
         new_state->sum_vector[i] = state_1->sum_vector[i] + state_2->sum_vector[i];
 
-    int table_id;
-    int col_id;
-    float *sum_vector_i;
     // new_state->similarities = new float[inst->total_num_columns];    
+    new_state->compute_similarities(inst);
 
-    for (int i = 0; i < inst->total_num_columns; i++)
-    {
-        table_id = inst->map[i][0];
-        col_id = inst->map[i][1];
-        sum_vector_i = inst->tables[table_id]->sum_vectors[col_id];
-        new_state->similarities[i] = cossine_similarity(new_state->sum_vector, sum_vector_i, inst->embedding_dim);
+    // for (int i = 0; i < inst->total_num_columns; i++)
+    // {
+    //     table_id = inst->map[i][0];
+    //     col_id = inst->map[i][1];
+    //     sum_vector_i = inst->tables[table_id]->sum_vectors[col_id];
+    //     new_state->similarities[i] = cossine_similarity(new_state->sum_vector, sum_vector_i, inst->embedding_dim);
         
-    }
+    // }
 
     // new_state->update_id = -1;
     // new_state->abs_column_id = -cluster_id; //NEGATIVE ID: A NON-LEAF STATE

@@ -473,7 +473,8 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     org->gamma = gamma;
 
     Cluster* active_clusters = Cluster::init_clusters(inst); // CHAINED LIST OF CLUSTERS AVAILABLE TO BE ADDED TO NN CHAIN
-    float** dist_matrix = Cluster::init_dist_matrix(active_clusters, inst->total_num_columns, inst->embedding_dim); // DISTANCE BETWEEN ALL CLUSTERS
+    int num_clusters = inst->num_tags > 0 ? inst->num_tags : inst->total_num_columns; // NUUMBER OF INITIAL CLUSTERS
+    float** dist_matrix = Cluster::init_dist_matrix(active_clusters, num_clusters, inst->embedding_dim); // DISTANCE BETWEEN ALL CLUSTERS
 
     Cluster *stack = active_clusters; //NEAREST NEIGHBORS CHAIN
     active_clusters = active_clusters->next; // REMOVE THE HEAD FROM CHAINED LIST AND ADD TO NN CHAIN
@@ -482,7 +483,8 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     Cluster *previous, *current; // ITERATORS
     Cluster *new_cluster;
 
-    int cluster_id = inst->total_num_columns; // MATRIX ID OF THE NEXT CLUSTER THAT WILL BE CREATED
+    int cluster_id = num_clusters; // MATRIX ID OF THE NEXT CLUSTER THAT WILL BE CREATED
+    int state_id = - inst->total_num_columns - inst->num_tags;
     float diff_dists;
 
     //WHILE THERE ARE CLUSTERS TO MERGE 
@@ -517,11 +519,12 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
         {
             // printf("%d\n", stack->is_NN_of->id);
             //MERGE THE RNN INTO A NEW CLUSTER
-            new_cluster = Cluster::merge_clusters(stack, dist_matrix, cluster_id, inst);
+            new_cluster = Cluster::merge_clusters(stack, dist_matrix, cluster_id, state_id, inst);
             //ADD THE NEW CLUSTER INTO UNMERGED CLUSTER LIST
             new_cluster->next = active_clusters;
             active_clusters = new_cluster;
             cluster_id++;
+            state_id--;
 
             //REMOVE THE RNN FROM NN CHAIN
             stack = stack->is_NN_of->is_NN_of;
@@ -542,8 +545,9 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
             stack = nn;
 
             if( active_clusters == NULL ) {
-                active_clusters = Cluster::merge_clusters(stack, dist_matrix, cluster_id, inst);
+                active_clusters = Cluster::merge_clusters(stack, dist_matrix, cluster_id, state_id, inst);
                 cluster_id++;
+                state_id--;
                 stack = stack->is_NN_of->is_NN_of;
             }
         }

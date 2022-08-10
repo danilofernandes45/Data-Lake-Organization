@@ -25,6 +25,21 @@ void State::destroy()
     delete this;
 }
 
+void State::compute_similarities(Instance *inst)
+{
+    int table_id;
+    int col_id;
+    float *sum_vector_i;
+    
+    for (int i = 0; i < inst->total_num_columns; i++)
+    {
+        table_id = inst->map[i][0];
+        col_id = inst->map[i][1];
+        sum_vector_i = inst->tables[table_id]->sum_vectors[col_id];
+        this->similarities[i] = cossine_similarity(this->sum_vector, sum_vector_i, inst->embedding_dim); 
+    }
+}
+
 State* State::build(Instance *inst, int id, int i, int j)
 {
     State *state = new State;

@@ -16,7 +16,7 @@ class Cluster
 
         static Cluster* init_clusters(Instance * inst);
         static float** init_dist_matrix(Cluster* active_clusters, int total_num_columns, int embedding_dim);
-        static Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, Instance *inst);
+        static Cluster* merge_clusters(Cluster *stack, float **dist_matrix, int cluster_id, int state_id, Instance *inst);
 
 };
 

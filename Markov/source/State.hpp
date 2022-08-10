@@ -4,6 +4,7 @@
 #include <bits/stdc++.h>
 #include<vector>
 #include "Instance.hpp"
+#include "utils.hpp"
 using namespace std;
 
 class State
@@ -22,6 +23,7 @@ class State
         int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED TO AVOID RECOMPUTATIONS IN THE DAG
 
         void update_reach_probs(float gamma, int total_num_columns);
+        void compute_similarities(Instance *inst);
         State* copy(int total_num_columns, int embedding_dim);
         void destroy();
 
