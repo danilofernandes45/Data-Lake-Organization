@@ -473,7 +473,7 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     org->gamma = gamma;
 
     Cluster* active_clusters = Cluster::init_clusters(inst); // CHAINED LIST OF CLUSTERS AVAILABLE TO BE ADDED TO NN CHAIN
-    int num_clusters = inst->num_tags > 0 ? inst->num_tags : inst->total_num_columns; // NUUMBER OF INITIAL CLUSTERS
+    int num_clusters = inst->num_tags > 0 ? inst->num_tags : inst->total_num_columns; // NUMBER OF INITIAL CLUSTERS
     float** dist_matrix = Cluster::init_dist_matrix(active_clusters, num_clusters, inst->embedding_dim); // DISTANCE BETWEEN ALL CLUSTERS
 
     Cluster *stack = active_clusters; //NEAREST NEIGHBORS CHAIN

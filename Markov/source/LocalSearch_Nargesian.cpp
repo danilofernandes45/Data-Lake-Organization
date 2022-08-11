@@ -117,6 +117,12 @@ int main()
     // int num_trials = 2;
     // cout << "effectiveness,ellapsed_time\n";
 
+    //TEST
+    org = Organization::generate_organization_by_clustering(instance, gamma);
+    print_organization(org);
+    return 0;
+    //TEST
+
     time(&start);
 
     org = Organization::generate_organization_by_clustering(instance, gamma);
