@@ -25,13 +25,6 @@ Cluster* Cluster::init_clusters(Instance * inst)
     //Create non-leaf nodes with tags, when they exists
     for (int i = 0; i < inst->num_tags; i++)
     {
-        // state = new State;
-        // state->update_id = -1;
-        // state->abs_column_id = -i-1;
-        // state->sum_vector = new float[inst->embedding_dim];
-        // state->similarities = new float[inst->total_num_columns];
-        // state->reach_probs = new float[inst->total_num_columns];
-        // state->domain = new int[inst->total_num_columns];
         state = State::build(inst, - inst->total_num_columns - i, -1, -1);
         tags.push_back(state);
 
@@ -52,16 +45,6 @@ Cluster* Cluster::init_clusters(Instance * inst)
     {
         for (int j = 0; j < inst->tables[i]->ncols; j++)
         {
-            // state = new State;
-            // state->update_id = -1;
-            // state->abs_column_id = id;
-            // state->sum_vector = inst->tables[i]->sum_vectors[j];
-            // state->sample_size = inst->tables[i]->nrows;
-            // state->similarities = new float[inst->total_num_columns];
-            // state->reach_probs = new float[inst->total_num_columns];
-            // state->domain = new int[inst->total_num_columns];
-            // state->domain[id] = 1;
-
             state = State::build(inst, id, i, j);
             
             if ( tags.empty() )
@@ -164,36 +147,28 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
     //CREATE A NEW STATE IN THE ORGANIZATION WHICH WILL BE PARENT OF RNN STATES
     State *new_state = State::build(inst, state_id, -1, -1);
 
-    // new_state->sum_vector = new float[inst->embedding_dim];
-    for (int i = 0; i < inst->embedding_dim; i++)
-        new_state->sum_vector[i] = state_1->sum_vector[i] + state_2->sum_vector[i];
+    int table_id, col_id;
 
-    // new_state->similarities = new float[inst->total_num_columns];    
+    for (int i = 0; i < inst->total_num_columns; i++) {
+        new_state->domain[i] = state_1->domain[i] | state_2->domain[i];
+
+        if ( new_state->domain[i] == 1 ) {
+
+            table_id = inst->map[i][0];
+            col_id = inst->map[i][1];
+
+            for (int d = 0; d < inst->embedding_dim; d++)
+                new_state->sum_vector[d] += inst->tables[table_id]->sum_vectors[col_id][d];
+        }
+    }
+
     new_state->compute_similarities(inst);
 
-    // for (int i = 0; i < inst->total_num_columns; i++)
-    // {
-    //     table_id = inst->map[i][0];
-    //     col_id = inst->map[i][1];
-    //     sum_vector_i = inst->tables[table_id]->sum_vectors[col_id];
-    //     new_state->similarities[i] = cossine_similarity(new_state->sum_vector, sum_vector_i, inst->embedding_dim);
-        
-    // }
-
-    // new_state->update_id = -1;
-    // new_state->abs_column_id = -cluster_id; //NEGATIVE ID: A NON-LEAF STATE
-    // new_state->reach_probs = new float[inst->total_num_columns];
-    // new_state->sample_size = state_1->sample_size + state_2->sample_size;
     new_state->children.push_back(state_1);
     new_state->children.push_back(state_2);
 
     state_1->parents.push_back(new_state);
-    state_2->parents.push_back(new_state);
-
-    // new_state->domain = new int[inst->total_num_columns];
-    for (int i = 0; i < inst->total_num_columns; i++)
-        new_state->domain[i] = state_1->domain[i] | state_2->domain[i];
-    
+    state_2->parents.push_back(new_state);   
 
     //CREATE A NEW CLUSTER CONTAINING THE NEW STATE
     Cluster *new_cluster = new Cluster;

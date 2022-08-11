@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": ["<", "${workspaceFolder}/${relativeFileDirname}/synthetic_data_lake.txt"],
+            "args": ["<", "${workspaceFolder}/${relativeFileDirname}/naive_1.2.txt"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

@@ -10,7 +10,7 @@ Instance* Instance::read_instance()
     instance->total_num_columns = 0;
     instance->tables = new Table*[instance->num_tables];
 
-    instance->num_tables = min(150, instance->num_tables);
+    instance->num_tables = min(50, instance->num_tables);
 
     for (int i = 0; i < instance->num_tables; i++)
     {
@@ -32,7 +32,7 @@ Instance* Instance::read_instance()
             //READ COLUMN TAGS
             scanf("%d", &num_tags_col);
             table->tags_cols.push_back( vector<int>() );
-            for (int d = 0; d < num_tags_col; d++) {
+            for (int k = 0; k < num_tags_col; k++) {
                 scanf("%d", &aux);
                 table->tags_cols[j].push_back(aux);
             }
