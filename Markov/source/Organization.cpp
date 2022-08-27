@@ -267,6 +267,31 @@ void Organization::delete_parent(int level, int level_id, int update_id)
 
 }
 
+void Organization::delete_parent(int level, int level_id, int update_id) 
+{
+    set<State*> deleted_states; // Binary tree
+    State * current = this->all_states[level][level_id];
+    State * deleted_parent = current->parents[0];
+    //FIND THE LEAST REACHABLE PARENT
+    for(int i = 1; i < current->parents.size(); i++){
+        if( current->parents[i]->overall_reach_prob > deleted_parent->overall_reach_prob )
+            deleted_parent = current->parents[i];
+    }
+    //FIND THE deleted_parent's SIBILINGS
+    for( State * grandpa : deleted_parent->parents ) {
+        for( State * sibiling : grandpa->children) {
+            deleted_states.insert(sibiling); // O(log N)
+        }
+    }
+    deleted_states.insert(deleted_parent);
+    //TRANSFER THE PARENTSHIP TO THE GRANDFATHER
+    for( State * parent : deleted_states ){
+        for(State * child : parent->children ){
+            //ToDo
+        }
+    }
+}
+
 void Organization::add_parent(int level, int level_id, int update_id)
 {
     State *current = this->all_states[level][level_id];
