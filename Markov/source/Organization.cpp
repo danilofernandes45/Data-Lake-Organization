@@ -271,23 +271,32 @@ void Organization::delete_parent(int level, int level_id, int update_id)
 {
     set<State*> deleted_states; // Binary tree
     State * current = this->all_states[level][level_id];
-    State * deleted_parent = current->parents[0];
+    State * deleted_parent = *current->parents.begin();
+    set<State*>::iterator iter;
     //FIND THE LEAST REACHABLE PARENT
-    for(int i = 1; i < current->parents.size(); i++){
-        if( current->parents[i]->overall_reach_prob > deleted_parent->overall_reach_prob )
-            deleted_parent = current->parents[i];
+    for( iter = current->parents.begin()++; iter != current->parents.end(); iter++){
+        if( (*iter)->overall_reach_prob < deleted_parent->overall_reach_prob )
+            deleted_parent = *iter;
     }
     //FIND THE deleted_parent's SIBILINGS
     for( State * grandpa : deleted_parent->parents ) {
-        for( State * sibiling : grandpa->children) {
+        for( State * sibiling : grandpa->children ) {
             deleted_states.insert(sibiling); // O(log N)
         }
     }
-    deleted_states.insert(deleted_parent);
+    //REMOVE THE PARENTSHIP FROM THE GRANDFATHER
+    for( State * parent : deleted_states ){
+        for( State * grandpa : parent->parents )
+            grandpa->children.erase(parent);
+    }
     //TRANSFER THE PARENTSHIP TO THE GRANDFATHER
     for( State * parent : deleted_states ){
-        for(State * child : parent->children ){
-            //ToDo
+        for( State * child : parent->children ){
+            child->parents.erase(parent);
+            for( State * grandpa : parent->parents ){
+                child->parents.insert(grandpa);
+                grandpa->children.insert(child);
+            }
         }
     }
 }
