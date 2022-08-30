@@ -15,8 +15,8 @@ class State
         int level;        // THE SHORTEST PATH LENGTH FROM THE ROOT
         float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
         float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
-        set<State*> parents;
-        set<State*> children;
+        set<State*, CompareLevel> parents;
+        set<State*, CompareLevel> children;
         float *similarities; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL
         int *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
         int abs_column_id; //ABSOLUTE COLUMN ID (ONLY FOR LEAF NODES)
