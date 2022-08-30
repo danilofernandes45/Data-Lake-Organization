@@ -11,7 +11,7 @@ class State
 {
     public:
         float *sum_vector; //SUM VECTOR REPRESENTATION OF THE STATE
-        int sample_size;  // NUMBER OF VALUES (WORD VECTORS) UNDER ITS DOMAIN
+        // int sample_size;  // NUMBER OF VALUES (WORD VECTORS) UNDER ITS DOMAIN
         int level;        // THE SHORTEST PATH LENGTH FROM THE ROOT
         float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
         float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
@@ -21,6 +21,7 @@ class State
         int *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
         int abs_column_id; //ABSOLUTE COLUMN ID (ONLY FOR LEAF NODES)
         int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED TO AVOID RECOMPUTATIONS IN THE DAG
+        bool is_tag;
 
         void update_reach_probs(float gamma, int total_num_columns);
         void compute_similarities(Instance *inst);

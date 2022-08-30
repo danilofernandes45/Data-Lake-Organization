@@ -1,19 +1,5 @@
 #include "Organization.hpp"
 
-void Organization::destroy()
-{
-    this->instance = NULL;
-
-    for(int i = 0; i < this->all_states.size(); i++)
-    {
-        for(int j = 0; j < this->all_states[i].size(); j++)
-            this->all_states[i][j]->destroy();
-        vector<State*>().swap(this->all_states[i]);
-    } 
-    vector< vector<State*> >().swap(this->all_states);  
-    delete this;
-}
-
 void Organization::success_probabilities()
 {
     State *leaf, *sim_leaf;
@@ -274,31 +260,36 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     State * deleted_parent = *current->parents.begin();
     set<State*>::iterator iter;
     //FIND THE LEAST REACHABLE PARENT
-    for( iter = current->parents.begin()++; iter != current->parents.end(); iter++){
+    for( iter = current->parents.begin()+1; iter != current->parents.end(); iter++){
         if( (*iter)->overall_reach_prob < deleted_parent->overall_reach_prob )
             deleted_parent = *iter;
     }
     //FIND THE deleted_parent's SIBILINGS
     for( State * grandpa : deleted_parent->parents ) {
         for( State * sibiling : grandpa->children ) {
-            deleted_states.insert(sibiling); // O(log N)
+            if( sibiling == deleted_parent || !sibiling->is_tag )
+                    deleted_states.insert(sibiling); // O(log N)
         }
     }
     //REMOVE THE PARENTSHIP FROM THE GRANDFATHER
     for( State * parent : deleted_states ){
-        for( State * grandpa : parent->parents )
-            grandpa->children.erase(parent);
+        for( State * grandpa : parent->parents ) {
+            grandpa->children.erase(parent); // O(log N)
+            grandpa->is_tag = grandpa->is_tag | parent->is_tag; //IF PARENT HAS A TAG, THEN THE GRANDPA WILL HAVE IT TOO 
+        }
     }
     //TRANSFER THE PARENTSHIP TO THE GRANDFATHER
     for( State * parent : deleted_states ){
         for( State * child : parent->children ){
             child->parents.erase(parent);
             for( State * grandpa : parent->parents ){
-                child->parents.insert(grandpa);
+                child->parents.insert(grandpa); // O(log N)
                 grandpa->children.insert(child);
             }
         }
     }
+
+    //UPDATE DESCEDANTS
 }
 
 void Organization::add_parent(int level, int level_id, int update_id)
@@ -319,8 +310,8 @@ void Organization::add_parent(int level, int level_id, int update_id)
     }
 
     if( best_candidate != NULL ){
-        current->parents.push_back( best_candidate );
-        best_candidate->children.push_back(current);
+        current->parents.insert( best_candidate );
+        best_candidate->children.insert(current);
         min_level = Organization::update_ancestors(current, this->instance, this->gamma, update_id);
 
         for (int i = min_level; i < this->all_states.size(); i++)
@@ -336,6 +327,7 @@ void Organization::add_parent(int level, int level_id, int update_id)
 void Organization::update_descendants(State *patriarch, float gamma, int total_num_columns, int update_id)
 {    
     queue<State*> queue; //QUEUE USED IN THE BREADTH-FIRST SEARCH
+    set<State*>::iterator iter;
     queue.push(patriarch);
     State *current;
 
@@ -363,9 +355,11 @@ void Organization::update_descendants(State *patriarch, float gamma, int total_n
             //</TEST!>
 
             //ADD ITS CHILDREN TO THE QUEUE
-            for(int i=0; i < current->children.size(); i++ )
-                queue.push(current->children[i]);
-
+            iter = current->children.begin();
+            for(int i=0; i < current->children.size(); i++ ) {
+                queue.push(*iter);
+                iter++;
+            }
             current->update_id = update_id;
         }
     }
@@ -456,7 +450,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
     org->root->update_id = -1;
     org->root->abs_column_id = -inst->total_num_columns;
     org->root->sum_vector = new float[inst->embedding_dim]; // VECTOR INITIALIZED WITH ZEROS
-    org->root->sample_size = 0;
+    // org->root->sample_size = 0;
     org->root->domain = new int[inst->total_num_columns];
     for (int i = 0; i < inst->total_num_columns; i++)
         org->root->domain[i] = 1;
@@ -467,7 +461,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
     //Leaf nodes (columns representation) creation
     for (int i = 0; i < inst->num_tables; i++)
     {
-        org->root->sample_size += inst->tables[i]->nrows * inst->tables[i]->ncols;
+        // org->root->sample_size += inst->tables[i]->nrows * inst->tables[i]->ncols;
 
         for (int j = 0; j < inst->tables[i]->ncols; j++)
         {
@@ -479,14 +473,14 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
             state->domain[count] = 1;
             count++;
 
-            state->parents.push_back( org->root );
+            state->parents.insert( org->root );
             state->sum_vector = inst->tables[i]->sum_vectors[j];
-            state->sample_size = inst->tables[i]->nrows;
+            // state->sample_size = inst->tables[i]->nrows;
             //root sum vector incrementation 
             for (int d = 0; d < inst->embedding_dim; d++)
                 org->root->sum_vector[d] += state->sum_vector[d];
             //Adding the leaf to the organization as child of the root
-            org->root->children.push_back(state);
+            org->root->children.insert(state);
         }   
     }
     org->compute_all_reach_probs();

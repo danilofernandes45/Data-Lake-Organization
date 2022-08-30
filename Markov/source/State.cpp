@@ -35,10 +35,11 @@ State* State::build(Instance *inst, int id, int i, int j)
     state->similarities = new float[inst->total_num_columns];
     state->reach_probs = new float[inst->total_num_columns];
     state->domain = new int[inst->total_num_columns];
+    state->is_tag = false;
 
     if ( i >= 0 && j >= 0 ) {
         state->sum_vector = inst->tables[i]->sum_vectors[j];
-        state->sample_size = inst->tables[i]->nrows;
+        // state->sample_size = inst->tables[i]->nrows;
         state->domain[id] = 1;
     } else {
         state->sum_vector = new float[inst->embedding_dim];
@@ -50,7 +51,7 @@ State* State::build(Instance *inst, int id, int i, int j)
 State* State::copy(int total_num_columns, int embedding_dim)
 {
     State *copy = new State;
-    copy->sample_size = this->sample_size;
+    // copy->sample_size = this->sample_size;
     copy->level = this->level;
     copy->abs_column_id = this->abs_column_id;
     copy->update_id = this->update_id;

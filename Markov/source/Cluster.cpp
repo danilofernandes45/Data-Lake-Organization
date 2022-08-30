@@ -4,8 +4,8 @@ void add_parenthood(State *parent, State *child, int embedding_dim)
 {
     parent->domain[child->abs_column_id] = 1;
 
-    parent->children.push_back(child);
-    child->parents.push_back(parent);
+    parent->children.insert(child);
+    child->parents.insert(parent);
 
     for(int i = 0; i < embedding_dim; i++) {
         parent->sum_vector[i] += child->sum_vector[i];
@@ -26,6 +26,7 @@ Cluster* Cluster::init_clusters(Instance * inst)
     for (int i = 0; i < inst->num_tags; i++)
     {
         state = State::build(inst, - inst->total_num_columns - i, -1, -1);
+        state->is_tag = true;
         tags.push_back(state);
 
         current = new Cluster;
@@ -164,11 +165,11 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
 
     new_state->compute_similarities(inst);
 
-    new_state->children.push_back(state_1);
-    new_state->children.push_back(state_2);
+    new_state->children.insert(state_1);
+    new_state->children.insert(state_2);
 
-    state_1->parents.push_back(new_state);
-    state_2->parents.push_back(new_state);   
+    state_1->parents.insert(new_state);
+    state_2->parents.insert(new_state);   
 
     //CREATE A NEW CLUSTER CONTAINING THE NEW STATE
     Cluster *new_cluster = new Cluster;
