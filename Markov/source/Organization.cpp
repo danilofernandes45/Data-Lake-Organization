@@ -271,12 +271,15 @@ void Organization::delete_parent(int level, int level_id, int update_id)
                     deleted_states.insert(sibiling); // O(log N)
         }
     }
+    //IF deleted_parent HAS A TAG, THEN ITS GRANDPAS WILL HAVE IT TOO
+    if( deleted_parent->is_tag ) {
+        for( State * grandpa : deleted_parent->parents )
+            grandpa->is_tag = true;
+    }
     //REMOVE THE PARENTSHIP FROM THE GRANDFATHER
     for( State * parent : deleted_states ){
-        for( State * grandpa : parent->parents ) {
+        for( State * grandpa : parent->parents )
             grandpa->children.erase(parent); // O(log N)
-            grandpa->is_tag = grandpa->is_tag | parent->is_tag; //IF PARENT HAS A TAG, THEN THE GRANDPA WILL HAVE IT TOO 
-        }
     }
     //TRANSFER THE PARENTSHIP TO THE GRANDFATHER
     for( State * parent : deleted_states ){
@@ -288,8 +291,8 @@ void Organization::delete_parent(int level, int level_id, int update_id)
             }
         }
     }
-
     //UPDATE DESCEDANTS
+    
 }
 
 void Organization::add_parent(int level, int level_id, int update_id)
