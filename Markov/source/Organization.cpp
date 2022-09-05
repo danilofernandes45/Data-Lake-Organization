@@ -318,7 +318,7 @@ void Organization::add_parent(int level, int level_id, int update_id)
     //FIND THE BEST CANDIDATE THAT IS NOT A PARENT -> O(M * log N)
     for( int i = candidates->size()-1; i >= 0; i--) {
         iter--;
-        if( current->parents.find(*iter) == current->parents.end() && current->children.find(*iter) == current->children.end() ) { // O(log N)
+        if( (*iter)->children.size() > 0 && current->parents.find(*iter) == current->parents.end() && current->children.find(*iter) == current->children.end() ) { // O(log N)
             best_candidate = *iter;
             break;
         } 
