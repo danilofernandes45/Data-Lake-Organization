@@ -318,7 +318,7 @@ void Organization::add_parent(int level, int level_id, int update_id)
     //FIND THE BEST CANDIDATE THAT IS NOT A PARENT -> O(M * log N)
     for( int i = candidates->size()-1; i >= 0; i--) {
         iter--;
-        if( current->parents.find(*iter) == current->parents.end() ) { // O(log N)
+        if( current->parents.find(*iter) == current->parents.end() && current->children.find(*iter) == current->children.end() ) { // O(log N)
             best_candidate = *iter;
             break;
         } 
@@ -362,8 +362,10 @@ void Organization::update_descendants(vector<State*> ancestors, int update_id)
             //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
             this->all_states[current->level].insert(current); //O(log N)
             //ADD ITS CHILDREN TO THE QUEUE
-            for( State * child : current->children )
+            for( State * child : current->children ) {
+                child->update_lpl();
                 outdated_states.push(child);
+            }
             
             current->update_id = update_id;
         }
