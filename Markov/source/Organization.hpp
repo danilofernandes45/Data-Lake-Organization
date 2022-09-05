@@ -13,7 +13,7 @@ class Organization
         Instance *instance = NULL;
         State *root = NULL;
         float gamma; // HYPERPARAMETER USED IN PROBABILITY ESTIMATION
-        vector< vector<State*> > all_states;
+        vector< set<State*, CompareProb> > all_states;
         vector<State*> leaves;
         float effectiveness;
         
@@ -25,10 +25,9 @@ class Organization
         Organization* copy();
         void delete_parent(int level, int level_id, int update_id);
         void add_parent(int level, int level_id, int update_id);
-        void destroy();
 
-        static int update_ancestors(State *descendant, Instance *inst, float gamma, int update_id);
-        static void update_descendants(State *patriarch, float gamma, int total_num_columns, int update_id);
+        void update_ancestors(State *descendant, int update_id);
+        void update_descendants(vector<State*> ancestors, int update_id);
         static Organization* generate_basic_organization(Instance * inst, float gamma);
         static Organization* generate_organization_by_clustering(Instance * inst, float gamma);
 };

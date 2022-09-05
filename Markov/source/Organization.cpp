@@ -256,11 +256,12 @@ void Organization::delete_parent(int level, int level_id, int update_id)
 void Organization::delete_parent(int level, int level_id, int update_id) 
 {
     set<State*> deleted_states; // Binary tree
-    State * current = this->all_states[level][level_id];
+    vector<State*> grandpas;
+    State * current = *next(this->all_states[level].begin(), level_id); //GET ELEMENT AT POSITION level_id
     State * deleted_parent = *current->parents.begin();
     set<State*>::iterator iter;
     //FIND THE LEAST REACHABLE PARENT
-    for( iter = current->parents.begin()+1; iter != current->parents.end(); iter++){
+    for( iter = next(current->parents.begin()); iter != current->parents.end(); iter++){
         if( (*iter)->overall_reach_prob < deleted_parent->overall_reach_prob )
             deleted_parent = *iter;
     }
@@ -277,9 +278,12 @@ void Organization::delete_parent(int level, int level_id, int update_id)
             grandpa->is_tag = true;
     }
     //REMOVE THE PARENTSHIP FROM THE GRANDFATHER
+    //ADD THE GRANDFATHERS INTO THE HEAP (THEIR DESCENT WILL BE UPDATED)
     for( State * parent : deleted_states ){
-        for( State * grandpa : parent->parents )
+        for( State * grandpa : parent->parents ) {
             grandpa->children.erase(parent); // O(log N)
+            grandpas.push_back(grandpa); // O(1)
+        }
     }
     //TRANSFER THE PARENTSHIP TO THE GRANDFATHER
     for( State * parent : deleted_states ){
@@ -291,153 +295,135 @@ void Organization::delete_parent(int level, int level_id, int update_id)
             }
         }
     }
+    //REMOVE deleted_parents FROM THE ORGANIZATION
+    for( State * parent : deleted_states )
+        this->all_states[parent->level].erase(parent);
+
     //UPDATE DESCEDANTS
-    
+    this->update_descendants(grandpas, update_id);
+    this->update_effectiveness();
+
+    //REMOVE EMPTY LEVELS FROM all_states
+    while( this->all_states[-1].empty() )
+        this->all_states.pop_back();
 }
 
 void Organization::add_parent(int level, int level_id, int update_id)
 {
-    State *current = this->all_states[level][level_id];
-    vector <State*> *candidates = &this->all_states[level-1];
+    State *current = *next(this->all_states[level].begin(), level_id);
+    set<State*, CompareProb> * candidates = &this->all_states[level-1];
+    set<State*, CompareProb>::iterator iter = candidates->end();
     State *best_candidate = NULL;
-    int min_level = -1;
 
-    for( int i = candidates->size()-1; i >= 0; i--)
-    {
-        if( find(current->parents.begin(), current->parents.end(), (*candidates)[i]) ==  current->parents.end() ){
-            if( best_candidate == NULL )
-                best_candidate = (*candidates)[i];
-            else if ( (*candidates)[i]->overall_reach_prob > best_candidate->overall_reach_prob )
-                best_candidate = (*candidates)[i];
+    //FIND THE BEST CANDIDATE THAT IS NOT A PARENT -> O(M * log N)
+    for( int i = candidates->size()-1; i >= 0; i--) {
+        iter--;
+        if( current->parents.find(*iter) == current->parents.end() ) { // O(log N)
+            best_candidate = *iter;
+            break;
         } 
     }
 
     if( best_candidate != NULL ){
-        current->parents.insert( best_candidate );
-        best_candidate->children.insert(current);
-        min_level = Organization::update_ancestors(current, this->instance, this->gamma, update_id);
-
-        for (int i = min_level; i < this->all_states.size(); i++)
-            sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
-
+        current->parents.insert( best_candidate ); // O(log N)
+        best_candidate->children.insert(current); // O(log N)
+        this->update_ancestors(current, update_id);
         this->update_effectiveness();
     }
-
 }
 
-//IMPLEMENTATION CONSIDERING THAT ALL PARENTS OF A STATE ARE IN THE SAME LEVEL
-//UNDER THIS CONSIDERATION, A BREADTH-FIRST SEARCH CAN UPDATE ALL PARENTS BEFORE ITS CHILDREN
-void Organization::update_descendants(State *patriarch, float gamma, int total_num_columns, int update_id)
-{    
-    queue<State*> queue; //QUEUE USED IN THE BREADTH-FIRST SEARCH
-    set<State*>::iterator iter;
-    queue.push(patriarch);
-    State *current;
+//É PRECISO ATUALIZAR O LBL PREVIAMENTE?
+//IMPLEMENTATION CONSIDERING THE PARENTS OF A STATE ARE IN DIFFERENT LEVELS
+void Organization::update_descendants(vector<State*> ancestors, int update_id)
+{
+    State *current, *parent;
+    priority_queue<State*, vector<State*>, CompareLPL> outdated_states;  //HEAP
 
-    while( !queue.empty() ){
+    for( State * ancestor : ancestors ){
+        for( State * child : ancestor->children ) {
+            child->update_lpl(); // VERIFICAR SE A MANTEM A CONSISTÊNCIA!!!
+            outdated_states.push(child);
+        }
+    }
+
+    while( !outdated_states.empty() ) 
+    {
         //GET THE FIRST STATE FROM THE QUEUE
-        current = queue.front();
-        queue.pop();
+        current = outdated_states.top();
+        outdated_states.pop();
         //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN UPDATED
         if( current->update_id != update_id )
         {
+            //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
+            this->all_states[current->level].erase(current); //O(log N)
             //COMPUTE ITS REACHABILITY PROBABILITIES
-            //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE IN THE SAME LEVEL
-            if( current != patriarch )
-                current->update_reach_probs(gamma, total_num_columns);
-
-            //<TEST!>
-            // printf("\nLevel: %d\nID: %d\n", current->level, current->abs_column_id);
-            // printf("Reach Probs\n");
-            // for (int t = 0; t < total_num_columns; t++)
-            //     printf("%.3f ", current->reach_probs[t]);
-            
-            // printf("\nOverall reach prob: %.3f\n", current->overall_reach_prob);
-            // if(current->abs_column_id >= 0)
-            //     printf("Discover probability: %.3f\n", current->reach_probs[current->abs_column_id]);
-            //</TEST!>
-
+            //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
+            current->update_reach_probs(this->gamma, this->instance->total_num_columns);
+            //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
+            this->all_states[current->level].insert(current); //O(log N)
             //ADD ITS CHILDREN TO THE QUEUE
-            iter = current->children.begin();
-            for(int i=0; i < current->children.size(); i++ ) {
-                queue.push(*iter);
-                iter++;
-            }
+            for( State * child : current->children )
+                outdated_states.push(child);
+            
             current->update_id = update_id;
         }
     }
 }
 
-int Organization::update_ancestors(State *descendant, Instance *inst, float gamma, int update_id)
+void Organization::update_ancestors(State *descendant, int update_id)
 {
-    queue<State*> queue; //QUEUE USED IN THE BREADTH-FIRST SEARCH
-    queue.push(descendant);
     //PATRIARCHS WHOSE DESCENDANTS NEED TO UPDATE REACH_PROBS
-    priority_queue<State*, vector<State*>, CompareLevel> outdated_states;  
+    vector<State*> ancestors;  
     //ITERATORS
     State *current;
     int table_id, col_id, min_level;
-    int has_changed = 1;
+    int has_changed;
     float *sum_vector_i;
+    //QUEUE USED IN THE BREADTH-FIRST SEARCH. THE DOMAIN UPDATING DON'T DEPENDS ON THE GRAPH NAVIGATION ORDER
+    queue<State*> queue;
+    for(State * parent : descendant->parents)
+        queue.push(parent);
 
+    //UPDATING ANCESTORS' DOMAIN (UPWARD)
     while( !queue.empty() ){
         //GET THE FIRST STATE FROM THE QUEUE 
         current = queue.front();
         queue.pop();
-
-        if( current != descendant )
+        has_changed = 0;
+        //CHECK WHICH TOPICS NEED TO BE ADDED IN current's DOMAIN
+        for(int i = 0; i < this->instance->total_num_columns; i++)
         {
-            has_changed = 0;
-            //CHECK WHICH TOPICS NEED TO BE ADDED IN current's DOMAIN
-            for(int i = 0; i < inst->total_num_columns; i++)
+            if(descendant->domain[i] == 1 && current->domain[i] == 0)
             {
-                if(descendant->domain[i] == 1 && current->domain[i] == 0)
-                {
-                    has_changed = 1;
-                    current->domain[i] = 1;
-                    table_id = inst->map[i][0];
-                    col_id = inst->map[i][1];
-                    for(int d = 0; d < inst->embedding_dim; d++)
-                        current->sum_vector[d] += inst->tables[table_id]->sum_vectors[col_id][d];
-                }
+                has_changed = 1;
+                current->domain[i] = 1;
+                table_id = this->instance->map[i][0];
+                col_id = this->instance->map[i][1];
+                sum_vector_i = this->instance->tables[table_id]->sum_vectors[col_id];
+                for(int d = 0; d < this->instance->embedding_dim; d++)
+                    current->sum_vector[d] += sum_vector_i[d];
             }
         }
 
-        if( has_changed == 1 )
-        {
-            //UPDATE SIMILARITIES
-            for (int i = 0; i < inst->total_num_columns; i++)
+        if( has_changed == 1 ) {
+            //UPDATE SIMILARITIES IF CHANGES current'S DOMAIN
+            for (int i = 0; i < this->instance->total_num_columns; i++)
             {
-                table_id = inst->map[i][0];
-                col_id = inst->map[i][1];
-                sum_vector_i = inst->tables[table_id]->sum_vectors[col_id];
-                current->similarities[i] = cossine_similarity(current->sum_vector, sum_vector_i, inst->embedding_dim);
+                table_id = this->instance->map[i][0];
+                col_id = this->instance->map[i][1];
+                sum_vector_i = this->instance->tables[table_id]->sum_vectors[col_id];
+                current->similarities[i] = cossine_similarity(current->sum_vector, sum_vector_i, this->instance->embedding_dim);
             }
-            
             //ITS PARENTS NEED TO BE VERIFIED
-            for(int i = 0; i < current->parents.size(); i++)
-                queue.push(current->parents[i]);
+            for(State * parent : current->parents)
+                queue.push(parent);
         } else {
-            //ITS SIBILINGS NEED UPDATE THIER reach_probs
-            outdated_states.push(current);
-        }
-        
+            //ITS DESCENDANTS NEED UPDATE THIER reach_probs
+            ancestors.push_back(current);
+        }  
     }
-    //UPDATE AFFECTED SUBGRAPHS WITH outdated_states AS PATRIARCHS
-    min_level = outdated_states.top()->level;
-    while( !outdated_states.empty() )
-    {
-        current = outdated_states.top();
-        outdated_states.pop();
-        if( current->update_id != update_id )
-        {
-            current->update_reach_probs(gamma, inst->total_num_columns);
-            current->update_id = update_id;
-            for(int i = 0; i < current->children.size(); i++)
-                outdated_states.push(current->children[i]);
-        } 
-    }
-    return min_level + 1;
+    //UPDATE PROBABILITIES ON AFFECTED SUBGRAPHS WITH outdated_states AS PATRIARCHS (DOWNWARD)
+    this->update_descendants(ancestors, update_id);
 }
 
 //GENERATE THE BASELINE ORGANIZATION

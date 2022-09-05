@@ -4,6 +4,14 @@ bool CompareLevel::operator()(const State *state_1, const State *state_2) {
     return state_1->level > state_2->level; 
 }
 
+bool CompareLPL::operator()(const State *state_1, const State *state_2) {
+    return state_1->lpl > state_2->lpl; 
+}
+
+bool CompareProb::operator()(const State *state_1, const State *state_2) {
+    return state_1->overall_reach_prob > state_2->overall_reach_prob; 
+}
+
 bool State::compare(const State *state_1, const State *state_2) {
     return state_1->overall_reach_prob < state_2->overall_reach_prob; 
 }
@@ -51,7 +59,7 @@ State* State::build(Instance *inst, int id, int i, int j)
 State* State::copy(int total_num_columns, int embedding_dim)
 {
     State *copy = new State;
-    // copy->sample_size = this->sample_size;
+    copy->lpl = this->lpl;
     copy->level = this->level;
     copy->abs_column_id = this->abs_column_id;
     copy->update_id = this->update_id;
@@ -77,6 +85,15 @@ State* State::copy(int total_num_columns, int embedding_dim)
     return copy;  
 }
 
+void State::update_lpl()
+{
+    this->lpl = 0;
+    for( State * parent : this->parents ) {
+        if( this->lpl <  parent->lpl + 1 )
+            this->lpl =  parent->lpl + 1;
+    }
+}
+
 void State::update_reach_probs(float gamma, int total_num_columns)
 {
     State *parent;
@@ -85,24 +102,22 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     set<State*>::iterator iter_p, iter_c;
 
     if( this->parents.size() != 0 )
-    {
-        //CONSIDERATION: ALL PARENTS ARE IN THE SAME LEVEL
+    {   
+        this->overall_reach_prob = 0;
         parent = *this->parents.begin();
         this->level = parent->level + 1;
-        this->overall_reach_prob = 0;
+
         //FOR EACH INTERESTING TOPIC
-        for (int i = 0; i < total_num_columns; i++)
-        {
+        for (int i = 0; i < total_num_columns; i++) {
             //FOR EACH PARENT
             this->reach_probs[i] = 0; 
-            for(iter_p = this->parents.begin(); iter_p != this->parents.end(); iter_p++)
+            for( State * parent : this->parents )
             {
-                parent = *iter_p;
                 num_children = parent->children.size();
                 sum_probs = 0;
                 //WARNING: THIS CAN BE OPTIMIZED
-                for(iter_c = parent->children.begin(); iter_c != parent->children.end(); iter_c++)
-                    sum_probs += exp( gamma * (*iter_c)->similarities[i] / num_children);
+                for(State * child : parent->children )
+                    sum_probs += exp( gamma * child->similarities[i] / num_children);
                         
                 prob = exp( gamma * this->similarities[i] / num_children ) / sum_probs;
                 this->reach_probs[i] += prob * parent->reach_probs[i];

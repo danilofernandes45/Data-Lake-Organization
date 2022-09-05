@@ -13,6 +13,7 @@ class State
         float *sum_vector; //SUM VECTOR REPRESENTATION OF THE STATE
         // int sample_size;  // NUMBER OF VALUES (WORD VECTORS) UNDER ITS DOMAIN
         int level;        // THE SHORTEST PATH LENGTH FROM THE ROOT
+        int lpl;          // THE LONGEST PATH LENGTH FROM THE ROOT
         float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
         float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
         set<State*, CompareLevel> parents;
@@ -23,6 +24,7 @@ class State
         int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED TO AVOID RECOMPUTATIONS IN THE DAG
         bool is_tag;
 
+        void State::update_lpl();
         void update_reach_probs(float gamma, int total_num_columns);
         void compute_similarities(Instance *inst);
         State* copy(int total_num_columns, int embedding_dim);
@@ -34,6 +36,18 @@ class State
 };
 
 class CompareLevel
+{
+    public:
+        bool operator()(const State *state_1, const State *state_2);
+};
+
+class CompareLPL
+{
+    public:
+        bool operator()(const State *state_1, const State *state_2);
+};
+
+class CompareProb
 {
     public:
         bool operator()(const State *state_1, const State *state_2);
