@@ -38,13 +38,13 @@ State* State::build(Instance *inst, int id, int i, int j)
     state->abs_column_id = id;
     state->similarities = new float[inst->total_num_columns];
     state->reach_probs = new float[inst->total_num_columns];
-    state->domain = new int[inst->total_num_columns];
+    state->reachable_states = new bool[2*inst->total_num_columns-1]{0};
     state->is_tag = false;
 
     if ( i >= 0 && j >= 0 ) {
         state->sum_vector = inst->tables[i]->sum_vectors[j];
         // state->sample_size = inst->tables[i]->nrows;
-        state->domain[id] = 1;
+        state->reachable_states[id] = 1;
     } else {
         state->sum_vector = new float[inst->embedding_dim];
     }
@@ -72,9 +72,9 @@ State* State::copy(int total_num_columns, int embedding_dim)
     for (int i = 0; i < total_num_columns; i++)
         copy->similarities[i] = this->similarities[i];
 
-    copy->domain = new int[total_num_columns];
-    for (int i = 0; i < total_num_columns; i++)
-        copy->domain[i] = this->domain[i];
+    copy->reachable_states = new bool[2*total_num_columns-1];
+    for (int i = 0; i < 2*total_num_columns-1; i++)
+        copy->reachable_states[i] = this->reachable_states[i];
 
     // DON'T COPY PARENTS AND CHILDREN HERE
     return copy;  

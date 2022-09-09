@@ -2,7 +2,7 @@
 
 void add_parenthood(State *parent, State *child, int embedding_dim)
 {
-    parent->domain[child->abs_column_id] = 1;
+    parent->reachable_states[child->abs_column_id] = 1;
 
     parent->children.insert(child);
     child->parents.insert(parent);
@@ -148,12 +148,12 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
     //CREATE A NEW STATE IN THE ORGANIZATION WHICH WILL BE PARENT OF RNN STATES
     State *new_state = State::build(inst, state_id, -1, -1);
 
-    int table_id, col_id;
+    int table_id, col_id, iter;
 
     for (int i = 0; i < inst->total_num_columns; i++) {
-        new_state->domain[i] = state_1->domain[i] | state_2->domain[i];
+        new_state->reachable_states[i] = state_1->reachable_states[i] | state_2->reachable_states[i];
 
-        if ( new_state->domain[i] == 1 ) {
+        if ( new_state->reachable_states[i] == 1 ) {
 
             table_id = inst->map[i][0];
             col_id = inst->map[i][1];
@@ -162,6 +162,12 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
                 new_state->sum_vector[d] += inst->tables[table_id]->sum_vectors[col_id][d];
         }
     }
+
+    iter = inst->total_num_columns;
+    while( iter < 2 * inst->total_num_columns - 1 ) 
+         new_state->reachable_states[iter] = state_1->reachable_states[iter] | state_2->reachable_states[iter];       
+    
+    new_state->reachable_states[ abs(state_id) ] = 1;
 
     new_state->compute_similarities(inst);
 

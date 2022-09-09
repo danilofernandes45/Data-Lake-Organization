@@ -27,7 +27,7 @@ class Organization
         void add_parent(int level, int level_id, int update_id);
 
         void update_ancestors(State *descendant, int update_id);
-        void update_descendants(vector<State*> ancestors, int update_id);
+        void update_descendants(vector<State*> * ancestors, int update_id);
         static Organization* generate_basic_organization(Instance * inst, float gamma);
         static Organization* generate_organization_by_clustering(Instance * inst, float gamma);
 };

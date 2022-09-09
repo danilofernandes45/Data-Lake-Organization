@@ -243,7 +243,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
         this->all_states[parent->level].erase(parent); // O(log N)
 
     //UPDATE DESCEDANTS
-    this->update_descendants(grandpas, update_id);
+    this->update_descendants(&grandpas, update_id);
     this->update_effectiveness();
     //REMOVE EMPTY LEVELS FROM all_states
     while( this->all_states[-1].empty() )
@@ -256,10 +256,12 @@ void Organization::add_parent(int level, int level_id, int update_id)
     set<State*, CompareProb> * candidates = &this->all_states[level-1];
     set<State*, CompareProb>::iterator iter = candidates->end();
     State *best_candidate = NULL;
-    //FIND THE BEST CANDIDATE THAT IS NOT A PARENT -> O(M * log N)
+    int id;
+    //FIND THE BEST CANDIDATE WHO IS NEITHER PARENT NOR DESCEDANT
     for( int i = candidates->size()-1; i >= 0; i--) {
         iter--;
-        if( (*iter)->children.size() > 0 && current->parents.find(*iter) == current->parents.end() && current->children.find(*iter) == current->children.end() ) { // O(log N)
+        id = abs( (*iter)->abs_column_id );
+        if( (*iter)->children.size() > 0 && !current->reachable_states[id] && current->parents.find(*iter) == current->parents.end() ) {
             best_candidate = *iter;
             break;
         } 
@@ -278,37 +280,41 @@ void Organization::add_parent(int level, int level_id, int update_id)
 }
 
 //IMPLEMENTATION CONSIDERING THE PARENTS OF A STATE ARE IN DIFFERENT LEVELS
-void Organization::update_descendants(vector<State*> ancestors, int update_id)
+//TOPOLOGICAL SORT - APPROACH BASED ON DFS
+void Organization::update_descendants(vector<State*> * ancestors, int update_id)
 {
-    State *current, *parent;
-    priority_queue<State*, vector<State*>, CompareLPL> outdated_states;  //HEAP
+    State *current;
+    vector<State*> stack;
 
-    for( State * ancestor : ancestors ){
-        for( State * child : ancestor->children )
-            outdated_states.push(child);
-    }
-
-    while( !outdated_states.empty() ) 
+    while( !ancestors->empty() ) 
     {
-        //GET THE FIRST STATE FROM THE QUEUE
-        current = outdated_states.top();
-        outdated_states.pop();
-        //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN UPDATED
-        if( current->update_id != update_id )
-        {
-            //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
-            this->all_states[current->level].erase(current); //O(log N)
-            //COMPUTE ITS REACHABILITY PROBABILITIES
-            //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
-            current->update_reach_probs(this->gamma, this->instance->total_num_columns);
-            //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
-            this->all_states[current->level].insert(current); //O(log N)
-            //ADD ITS CHILDREN TO THE QUEUE
-            for( State * child : current->children ) 
-                outdated_states.push(child);
-            
+        //GET THE TOP STATE FROM THE STACK
+        current = ancestors->back();
+        //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN VISITED
+        if( current->update_id == update_id ) {
+            ancestors->pop_back();
+            stack.push_back(current);
+        } else {
+            //ADD ITS CHILDREN TO THE STACK
+            for( State * child : current->children ) {
+                if( child->update_id != update_id )
+                    ancestors->push_back(child);
+            }
             current->update_id = update_id;
         }
+    }
+    //UPDATE THE STATES ORDERED BY TOPOLOGICAL SORT
+    while ( !stack.empty() ) 
+    {   
+        current = stack.back();
+        stack.pop_back();
+        //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
+        this->all_states[current->level].erase(current); //O(log N)
+        //COMPUTE ITS REACHABILITY PROBABILITIES
+        //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
+        current->update_reach_probs(this->gamma, this->instance->total_num_columns);
+        //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
+        this->all_states[current->level].insert(current); //O(log N)
     }
 }
 
@@ -318,11 +324,11 @@ void Organization::update_ancestors(State *descendant, int update_id)
     vector<State*> ancestors;  
     //ITERATORS
     State *current;
-    int table_id, col_id, min_level;
+    int table_id, col_id, id;
     int has_changed;
     float *sum_vector_i;
     //QUEUE USED IN THE BREADTH-FIRST SEARCH. THE DOMAIN UPDATING DON'T DEPENDS ON THE GRAPH NAVIGATION ORDER
-    queue<State*> queue;
+    queue<State*> queue, reach_queue;
     for(State * parent : descendant->parents)
         queue.push(parent);
 
@@ -333,18 +339,25 @@ void Organization::update_ancestors(State *descendant, int update_id)
         queue.pop();
         has_changed = 0;
         //CHECK WHICH TOPICS NEED TO BE ADDED IN current's DOMAIN
+        //UPDATE THE REACHABILITY FOR THE SINK STATES
         for(int i = 0; i < this->instance->total_num_columns; i++)
         {
-            if(descendant->domain[i] == 1 && current->domain[i] == 0)
+            if(descendant->reachable_states[i] == 1 && current->reachable_states[i] == 0)
             {
                 has_changed = 1;
-                current->domain[i] = 1;
+                current->reachable_states[i] = 1;
                 table_id = this->instance->map[i][0];
                 col_id = this->instance->map[i][1];
                 sum_vector_i = this->instance->tables[table_id]->sum_vectors[col_id];
                 for(int d = 0; d < this->instance->embedding_dim; d++)
                     current->sum_vector[d] += sum_vector_i[d];
             }
+        }
+        //UPDATE THE REACHABILITY FOR THE INTERNAL STATES
+        id = this->instance->total_num_columns;
+        while( id < ( 2*this->instance->total_num_columns-1 ) ) {
+            current->reachable_states[id] = current->reachable_states[id] | descendant->reachable_states[id];
+            id++;
         }
 
         if( has_changed == 1 ) {
@@ -362,10 +375,32 @@ void Organization::update_ancestors(State *descendant, int update_id)
         } else {
             //ITS DESCENDANTS NEED UPDATE THIER reach_probs
             ancestors.push_back(current);
+            //ITS PARENTS MUST UPDATE THEIR reachable_states
+            for(State * parent : current->parents)
+                reach_queue.push(parent);
         }  
     }
+    //UPDATE REMAINING ANCESTORS'reachable_states (UPWARD)
+    while( !reach_queue.empty() ) {
+        current = reach_queue.front();
+        reach_queue.pop();
+        has_changed = 0;
+
+        id = this->instance->total_num_columns;
+        while( id < ( 2*this->instance->total_num_columns-1 ) ) {
+            if(descendant->reachable_states[id] == 1 && current->reachable_states[id] == 0) {
+                has_changed = 1;
+                current->reachable_states[id] = 1;
+            }
+            id++;
+        }
+        if( has_changed == 1 ) {
+            for(State * parent : current->parents)
+                reach_queue.push(parent);
+        }
+    }
     //UPDATE PROBABILITIES ON AFFECTED SUBGRAPHS WITH outdated_states AS PATRIARCHS (DOWNWARD)
-    this->update_descendants(ancestors, update_id);
+    this->update_descendants(&ancestors, update_id);
 }
 
 //GENERATE THE BASELINE ORGANIZATION
@@ -382,9 +417,9 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
     org->root->abs_column_id = -inst->total_num_columns;
     org->root->sum_vector = new float[inst->embedding_dim]; // VECTOR INITIALIZED WITH ZEROS
     // org->root->sample_size = 0;
-    org->root->domain = new int[inst->total_num_columns];
+    org->root->reachable_states = new bool[2*inst->total_num_columns-1];
     for (int i = 0; i < inst->total_num_columns; i++)
-        org->root->domain[i] = 1;
+        org->root->reachable_states[i] = 1;
 
     State *state;
     int count = 0;
@@ -400,8 +435,8 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
 
             state->abs_column_id = count;
             state->update_id = -1;
-            state->domain = new int[inst->total_num_columns];
-            state->domain[count] = 1;
+            state->reachable_states = new bool[2*inst->total_num_columns-1];
+            state->reachable_states[count] = 1;
             count++;
 
             state->parents.insert( org->root );

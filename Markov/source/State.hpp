@@ -17,12 +17,11 @@ class State
         float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
         set<State*, CompareLevel> parents;
         set<State*, CompareLevel> children;
-        vector<int> visited_children; // MARKS WHICH OUTCOME EDGES HAVE BEEN TRAVERSED IN THE CURRENT UPDATE
-        int remaining_visits; // NUMBER OF INCOME EDGES THAT REMAIN TO BE VISITED IN THE CURRENT UPDATE
         float *similarities; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL
-        int *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
+        // bool *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
+        bool *reachable_states; // BINARY VECTOR WHICH DEFINES THE REACHABLE STATES FROM THIS. THE FIRST |A| POSITIONS INDICATE THE COLUMNS, THEN THESE DEFINES THE STATE DOMAIN
         int abs_column_id; //ABSOLUTE COLUMN ID (ONLY FOR LEAF NODES)
-        int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED TO AVOID RECOMPUTATIONS IN THE DAG
+        int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED INTO TOPOLOGICAL SORT
         bool is_tag; //IF THE STATE REPRESENTS A TAG
 
         void update_reach_probs(float gamma, int total_num_columns);
