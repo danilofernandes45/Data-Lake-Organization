@@ -190,69 +190,6 @@ Organization* Organization::copy()
     return copy; 
 }
 
-void Organization::delete_parent(int level, int level_id, int update_id)
-{
-    State *current, *parent;
-    queue<State*> outdated_states;
-    vector<State*> *new_parents, *grandpa_children, deleted_states;
-    vector<State*>::iterator iter;
-    for (int i = 0; i < this->all_states[level].size(); i++)
-    {
-        current = this->all_states[level][i];
-        new_parents = new vector<State*>;
-        for (int j = 0; j < current->parents.size(); j++)
-        {
-            parent = current->parents[j];
-            for (int k = 0; k < parent->parents.size(); k++)
-            {
-                if( find(new_parents->begin(), new_parents->end(), parent->parents[k]) == new_parents->end() )
-                {
-                    grandpa_children = &parent->parents[k]->children;
-
-                    // cout << "Parent " << parent->abs_column_id << "\n";
-                    // for (int t = 0; t < grandpa_children->size(); t++)
-                    //     cout << (*grandpa_children)[t]->abs_column_id << " ";
-                    // cout << "\n";
-
-                    iter = find(grandpa_children->begin(), grandpa_children->end(), parent);
-                    if( iter != grandpa_children->end() )
-                        grandpa_children->erase(iter);
-
-                    // for (int t = 0; t < grandpa_children->size(); t++)
-                    //     cout << (*grandpa_children)[t]->abs_column_id << " ";
-                    // cout << "\n";
-                    
-                    grandpa_children->push_back(current);
-                    new_parents->push_back(parent->parents[k]);
-                    outdated_states.push(parent->parents[k]);
-                }
-            }
-        }
-        current->parents = *new_parents;
-    }
-    while ( !outdated_states.empty() )
-    {
-        current = outdated_states.front();
-        outdated_states.pop();
-        Organization::update_descendants(current, this->gamma, this->instance->total_num_columns, update_id);
-    }
-    //UPDATE all_states
-    // AVOID LOST LEAF STATES
-    for(int i=0; i < this->all_states[level-1].size(); i++)
-    {
-        if( this->all_states[level-1][i]->children.size() == 0 )
-            this->all_states[level].push_back( this->all_states[level-1][i] );
-    }
-
-    deleted_states = this->all_states[level-1];
-    this->all_states.erase(this->all_states.begin() + level - 1);
-    this->update_effectiveness();
-
-    for (int i = level-1; i < this->all_states.size(); i++)
-        sort(this->all_states[i].begin(), this->all_states[i].end(), State::compare);
-
-}
-
 void Organization::delete_parent(int level, int level_id, int update_id) 
 {
     set<State*> deleted_states; // Binary tree
@@ -288,24 +225,29 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     //TRANSFER THE PARENTSHIP TO THE GRANDFATHER
     for( State * parent : deleted_states ){
         for( State * child : parent->children ){
-            child->parents.erase(parent);
+            child->parents.erase(parent); // O(log N)
             for( State * grandpa : parent->parents ){
                 child->parents.insert(grandpa); // O(log N)
-                grandpa->children.insert(child);
+                grandpa->children.insert(child); // O(log N)
             }
+            child->remaining_visits = child->parents.size(); // O(1)
         }
     }
+
+    //UPDATE THE visisted_children SIZE OF grandpas
+    for(State * grandpa : grandpas)
+        grandpa->visited_children.resize(grandpa->children.size(), -1);
+
     //REMOVE deleted_parents FROM THE ORGANIZATION
     for( State * parent : deleted_states )
-        this->all_states[parent->level].erase(parent);
+        this->all_states[parent->level].erase(parent); // O(log N)
 
     //UPDATE DESCEDANTS
     this->update_descendants(grandpas, update_id);
     this->update_effectiveness();
-
     //REMOVE EMPTY LEVELS FROM all_states
     while( this->all_states[-1].empty() )
-        this->all_states.pop_back();
+        this->all_states.pop_back(); // O(1)
 }
 
 void Organization::add_parent(int level, int level_id, int update_id)
@@ -314,7 +256,6 @@ void Organization::add_parent(int level, int level_id, int update_id)
     set<State*, CompareProb> * candidates = &this->all_states[level-1];
     set<State*, CompareProb>::iterator iter = candidates->end();
     State *best_candidate = NULL;
-
     //FIND THE BEST CANDIDATE THAT IS NOT A PARENT -> O(M * log N)
     for( int i = candidates->size()-1; i >= 0; i--) {
         iter--;
@@ -327,12 +268,15 @@ void Organization::add_parent(int level, int level_id, int update_id)
     if( best_candidate != NULL ){
         current->parents.insert( best_candidate ); // O(log N)
         best_candidate->children.insert(current); // O(log N)
+        //CREATE VISITED FLAG FOR TOPOLOGICAL SORT
+        current->remaining_visits = current->parents.size();
+        best_candidate->visited_children.push_back(-1);
+        //UPDATE DOMAINS AND PROBABILITIES
         this->update_ancestors(current, update_id);
         this->update_effectiveness();
     }
 }
 
-//É PRECISO ATUALIZAR O LBL PREVIAMENTE?
 //IMPLEMENTATION CONSIDERING THE PARENTS OF A STATE ARE IN DIFFERENT LEVELS
 void Organization::update_descendants(vector<State*> ancestors, int update_id)
 {
@@ -340,10 +284,8 @@ void Organization::update_descendants(vector<State*> ancestors, int update_id)
     priority_queue<State*, vector<State*>, CompareLPL> outdated_states;  //HEAP
 
     for( State * ancestor : ancestors ){
-        for( State * child : ancestor->children ) {
-            child->update_lpl(); // VERIFICAR SE A MANTEM A CONSISTÊNCIA!!!
+        for( State * child : ancestor->children )
             outdated_states.push(child);
-        }
     }
 
     while( !outdated_states.empty() ) 
@@ -362,10 +304,8 @@ void Organization::update_descendants(vector<State*> ancestors, int update_id)
             //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
             this->all_states[current->level].insert(current); //O(log N)
             //ADD ITS CHILDREN TO THE QUEUE
-            for( State * child : current->children ) {
-                child->update_lpl();
+            for( State * child : current->children ) 
                 outdated_states.push(child);
-            }
             
             current->update_id = update_id;
         }

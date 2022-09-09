@@ -13,18 +13,18 @@ class State
         float *sum_vector; //SUM VECTOR REPRESENTATION OF THE STATE
         // int sample_size;  // NUMBER OF VALUES (WORD VECTORS) UNDER ITS DOMAIN
         int level;        // THE SHORTEST PATH LENGTH FROM THE ROOT
-        int lpl;          // THE LONGEST PATH LENGTH FROM THE ROOT
         float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
         float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
         set<State*, CompareLevel> parents;
         set<State*, CompareLevel> children;
+        vector<int> visited_children; // MARKS WHICH OUTCOME EDGES HAVE BEEN TRAVERSED IN THE CURRENT UPDATE
+        int remaining_visits; // NUMBER OF INCOME EDGES THAT REMAIN TO BE VISITED IN THE CURRENT UPDATE
         float *similarities; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL
         int *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
         int abs_column_id; //ABSOLUTE COLUMN ID (ONLY FOR LEAF NODES)
         int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED TO AVOID RECOMPUTATIONS IN THE DAG
-        bool is_tag;
+        bool is_tag; //IF THE STATE REPRESENTS A TAG
 
-        void State::update_lpl();
         void update_reach_probs(float gamma, int total_num_columns);
         void compute_similarities(Instance *inst);
         State* copy(int total_num_columns, int embedding_dim);

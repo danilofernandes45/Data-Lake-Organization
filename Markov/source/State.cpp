@@ -4,10 +4,6 @@ bool CompareLevel::operator()(const State *state_1, const State *state_2) {
     return state_1->level > state_2->level; 
 }
 
-bool CompareLPL::operator()(const State *state_1, const State *state_2) {
-    return state_1->lpl > state_2->lpl; 
-}
-
 bool CompareProb::operator()(const State *state_1, const State *state_2) {
     return state_1->overall_reach_prob > state_2->overall_reach_prob; 
 }
@@ -59,7 +55,6 @@ State* State::build(Instance *inst, int id, int i, int j)
 State* State::copy(int total_num_columns, int embedding_dim)
 {
     State *copy = new State;
-    copy->lpl = this->lpl;
     copy->level = this->level;
     copy->abs_column_id = this->abs_column_id;
     copy->update_id = this->update_id;
@@ -83,15 +78,6 @@ State* State::copy(int total_num_columns, int embedding_dim)
 
     // DON'T COPY PARENTS AND CHILDREN HERE
     return copy;  
-}
-
-void State::update_lpl()
-{
-    this->lpl = 0;
-    for( State * parent : this->parents ) {
-        if( this->lpl <  parent->lpl + 1 )
-            this->lpl =  parent->lpl + 1;
-    }
 }
 
 void State::update_reach_probs(float gamma, int total_num_columns)
