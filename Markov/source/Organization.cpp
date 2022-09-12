@@ -270,11 +270,9 @@ void Organization::add_parent(int level, int level_id, int update_id)
     if( best_candidate != NULL ){
         current->parents.insert( best_candidate ); // O(log N)
         best_candidate->children.insert(current); // O(log N)
-        //CREATE VISITED FLAG FOR TOPOLOGICAL SORT
-        current->remaining_visits = current->parents.size();
-        best_candidate->visited_children.push_back(-1);
         //UPDATE DOMAINS AND PROBABILITIES
-        this->update_ancestors(current, update_id);
+        this->update_reachable_states(current, best_candidate);
+        this->update_ancestors(best_candidate, update_id);
         this->update_effectiveness();
     }
 }
@@ -284,23 +282,31 @@ void Organization::add_parent(int level, int level_id, int update_id)
 void Organization::update_descendants(vector<State*> * ancestors, int update_id)
 {
     State *current;
-    vector<State*> stack;
+    vector<State*> path, stack;
+    path.push_back( ancestors->back() );
+    ancestors->pop_back();
 
-    while( !ancestors->empty() ) 
-    {
+    while( !path.empty() ) {
         //GET THE TOP STATE FROM THE STACK
-        current = ancestors->back();
+        current = path.back();
         //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN VISITED
         if( current->update_id == update_id ) {
-            ancestors->pop_back();
+            path.pop_back();
             stack.push_back(current);
         } else {
             //ADD ITS CHILDREN TO THE STACK
             for( State * child : current->children ) {
                 if( child->update_id != update_id )
-                    ancestors->push_back(child);
+                    path.push_back(child);
             }
             current->update_id = update_id;
+        }
+        //ADD AN UNVISITED STATE INTO THE PATH WHEN IT IS EMPTY
+        while( path.empty() && !ancestors->empty() ) {
+            current = ancestors->back();
+            ancestors->pop_back();
+            if( current->update_id != update_id ) 
+                path.push_back( current );
         }
     }
     //UPDATE THE STATES ORDERED BY TOPOLOGICAL SORT
@@ -310,39 +316,21 @@ void Organization::update_descendants(vector<State*> * ancestors, int update_id)
         stack.pop_back();
         //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
         this->all_states[current->level].erase(current); //O(log N)
-        //COMPUTE ITS REACHABILITY PROBABILITIES
-        //UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
+        //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
         //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
         this->all_states[current->level].insert(current); //O(log N)
     }
 }
 
-void Organization::update_ancestors(State *descendant, int update_id)
+int Organization::update_reachable_states(State * descendant, State * current)
 {
-    //PATRIARCHS WHOSE DESCENDANTS NEED TO UPDATE REACH_PROBS
-    vector<State*> ancestors;  
-    //ITERATORS
-    State *current;
+    bool has_changed = 0;
     int table_id, col_id, id;
-    int has_changed;
     float *sum_vector_i;
-    //QUEUE USED IN THE BREADTH-FIRST SEARCH. THE DOMAIN UPDATING DON'T DEPENDS ON THE GRAPH NAVIGATION ORDER
-    queue<State*> queue, reach_queue;
-    for(State * parent : descendant->parents)
-        queue.push(parent);
-
-    //UPDATING ANCESTORS' DOMAIN (UPWARD)
-    while( !queue.empty() ){
-        //GET THE FIRST STATE FROM THE QUEUE 
-        current = queue.front();
-        queue.pop();
-        has_changed = 0;
-        //CHECK WHICH TOPICS NEED TO BE ADDED IN current's DOMAIN
-        //UPDATE THE REACHABILITY FOR THE SINK STATES
-        for(int i = 0; i < this->instance->total_num_columns; i++)
+    for(int i = 0; i < this->instance->total_num_columns; i++)
         {
-            if(descendant->reachable_states[i] == 1 && current->reachable_states[i] == 0)
+            if( descendant->reachable_states[i] && !current->reachable_states[i] )
             {
                 has_changed = 1;
                 current->reachable_states[i] = 1;
@@ -359,8 +347,34 @@ void Organization::update_ancestors(State *descendant, int update_id)
             current->reachable_states[id] = current->reachable_states[id] | descendant->reachable_states[id];
             id++;
         }
+    return has_changed;
+}
 
-        if( has_changed == 1 ) {
+void Organization::update_ancestors(State *descendant, int update_id)
+{
+    //PATRIARCHS WHOSE DESCENDANTS NEED TO UPDATE REACH_PROBS
+    vector<State*> ancestors;  
+    //ITERATORS
+    State *current;
+    int table_id, col_id, id;
+    bool has_changed;
+    float *sum_vector_i;
+    //QUEUE USED IN THE BREADTH-FIRST SEARCH. THE DOMAIN UPDATING DON'T DEPENDS ON THE GRAPH NAVIGATION ORDER
+    queue<State*> queue, reach_queue;
+    for(State * parent : descendant->parents)
+        queue.push(parent);
+
+    //UPDATING ANCESTORS' DOMAIN (UPWARD)
+    while( !queue.empty() ){
+        //GET THE FIRST UNVISITED STATE FROM THE QUEUE 
+        current = queue.front();
+        queue.pop();
+        //CHECK WHICH TOPICS NEED TO BE ADDED IN current's DOMAIN
+        //UPDATE THE REACHABILITY FOR THE SINK STATES
+        has_changed = this->update_reachable_states(descendant, current);
+        current->update_id = update_id;
+
+        if( has_changed ) {
             //UPDATE SIMILARITIES IF CHANGES current'S DOMAIN
             for (int i = 0; i < this->instance->total_num_columns; i++)
             {
@@ -370,37 +384,43 @@ void Organization::update_ancestors(State *descendant, int update_id)
                 current->similarities[i] = cossine_similarity(current->sum_vector, sum_vector_i, this->instance->embedding_dim);
             }
             //ITS PARENTS NEED TO BE VERIFIED
-            for(State * parent : current->parents)
-                queue.push(parent);
+            for(State * parent : current->parents) {
+                if( parent->update_id != update_id )
+                    queue.push(parent);
+            }
         } else {
             //ITS DESCENDANTS NEED UPDATE THIER reach_probs
             ancestors.push_back(current);
             //ITS PARENTS MUST UPDATE THEIR reachable_states
-            for(State * parent : current->parents)
-                reach_queue.push(parent);
+            for(State * parent : current->parents) {
+                if( parent->update_id != update_id )
+                    reach_queue.push(parent);
+            }
         }  
     }
     //UPDATE REMAINING ANCESTORS'reachable_states (UPWARD)
     while( !reach_queue.empty() ) {
-        current = reach_queue.front();
-        reach_queue.pop();
+        current = queue.front();
+        queue.pop();
         has_changed = 0;
-
+        current->update_id = update_id;
         id = this->instance->total_num_columns;
         while( id < ( 2*this->instance->total_num_columns-1 ) ) {
-            if(descendant->reachable_states[id] == 1 && current->reachable_states[id] == 0) {
+            if(descendant->reachable_states[id] && !current->reachable_states[id] ) {
                 has_changed = 1;
                 current->reachable_states[id] = 1;
             }
             id++;
         }
-        if( has_changed == 1 ) {
-            for(State * parent : current->parents)
-                reach_queue.push(parent);
+        if( has_changed ) {
+            for(State * parent : current->parents) {
+                if( parent->update_id != update_id )
+                    reach_queue.push(parent);
+            }
         }
     }
     //UPDATE PROBABILITIES ON AFFECTED SUBGRAPHS WITH outdated_states AS PATRIARCHS (DOWNWARD)
-    this->update_descendants(&ancestors, update_id);
+    this->update_descendants(&ancestors, update_id + 1);
 }
 
 //GENERATE THE BASELINE ORGANIZATION

@@ -84,7 +84,7 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
             org = new_org->copy();
             level = 2;
             level_id = 0;
-            update_id++; 
+            update_id = update_id + 2; 
         } else {
             prob_accept = new_org->effectiveness / org->effectiveness;
             // cout << distribution(generator) << ", " << prob_accept << endl;
@@ -93,7 +93,7 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
                 org = new_org->copy();
                 level = 2;
                 level_id = 0;
-                update_id++;
+                update_id = update_id + 2;
             } else {
                 level_id = ( level_id + 1 ) % org->all_states[level].size();
                 if( level_id == 0 )
