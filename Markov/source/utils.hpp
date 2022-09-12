@@ -3,8 +3,10 @@
 
 #include <stdio.h>
 #include <bits/stdc++.h>
+#include "State.hpp"
 using namespace std;
 
 float cossine_similarity(float *vector_1, float *vector_2, int dim);
+void add_parenthood(State *parent, State *child, int embedding_dim);
 
 #endif

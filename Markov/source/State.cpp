@@ -35,11 +35,16 @@ State* State::build(Instance *inst, int id, int i, int j)
 {
     State *state = new State;
     state->update_id = -1;
+    state->level = -1;
     state->abs_column_id = id;
     state->similarities = new float[inst->total_num_columns];
     state->reach_probs = new float[inst->total_num_columns];
-    state->reachable_states = new bool[2*inst->total_num_columns-1]{0};
     state->is_tag = false;
+    
+    if( inst->num_tags > 0 )
+        state->reachable_states = new bool[inst->total_num_columns + 2*inst->num_tags - 1]{0};
+    else
+        state->reachable_states = new bool[2*inst->total_num_columns-1]{0};
 
     if ( i >= 0 && j >= 0 ) {
         state->sum_vector = inst->tables[i]->sum_vectors[j];
@@ -58,6 +63,7 @@ State* State::copy(int total_num_columns, int embedding_dim)
     copy->level = this->level;
     copy->abs_column_id = this->abs_column_id;
     copy->update_id = this->update_id;
+    copy->is_tag = this->is_tag;
     copy->overall_reach_prob = this->overall_reach_prob;
 
     copy->sum_vector = new float[embedding_dim];
@@ -87,7 +93,7 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     int num_children;
     set<State*>::iterator iter_p, iter_c;
 
-    if( this->parents.size() != 0 )
+    if( this->parents.size() > 0 )
     {   
         this->overall_reach_prob = 0;
         parent = *this->parents.begin();

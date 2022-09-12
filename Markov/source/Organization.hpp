@@ -16,10 +16,9 @@ class Organization
         vector< set<State*, CompareProb> > all_states;
         vector<State*> leaves;
         float effectiveness;
+        int max_num_states;
         
-        void compute_all_reach_probs();
         void init_all_states();
-        void update_all_states(int level);
         void update_effectiveness();
         void success_probabilities();
         Organization* copy();

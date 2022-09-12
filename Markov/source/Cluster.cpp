@@ -1,17 +1,5 @@
 #include "Cluster.hpp"
 
-void add_parenthood(State *parent, State *child, int embedding_dim)
-{
-    parent->reachable_states[child->abs_column_id] = 1;
-
-    parent->children.insert(child);
-    child->parents.insert(parent);
-
-    for(int i = 0; i < embedding_dim; i++) {
-        parent->sum_vector[i] += child->sum_vector[i];
-    }
-}
-
 Cluster* Cluster::init_clusters(Instance * inst)
 {
     Cluster* active_clusters = NULL;
@@ -148,7 +136,7 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
     //CREATE A NEW STATE IN THE ORGANIZATION WHICH WILL BE PARENT OF RNN STATES
     State *new_state = State::build(inst, state_id, -1, -1);
 
-    int table_id, col_id, iter;
+    int table_id, col_id, iter, max_num_states;
 
     for (int i = 0; i < inst->total_num_columns; i++) {
         new_state->reachable_states[i] = state_1->reachable_states[i] | state_2->reachable_states[i];
@@ -162,9 +150,13 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
                 new_state->sum_vector[d] += inst->tables[table_id]->sum_vectors[col_id][d];
         }
     }
-
     iter = inst->total_num_columns;
-    while( iter < 2 * inst->total_num_columns - 1 ) 
+    if( inst->num_tags > 0 )
+        max_num_states = inst->total_num_columns + 2 * inst->num_tags - 1;
+    else 
+        max_num_states = 2 * inst->total_num_columns - 1;
+        
+    while( iter <  max_num_states ) 
          new_state->reachable_states[iter] = state_1->reachable_states[iter] | state_2->reachable_states[iter];       
     
     new_state->reachable_states[ abs(state_id) ] = 1;
