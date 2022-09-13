@@ -68,6 +68,17 @@ Cluster* Cluster::init_clusters(Instance * inst)
             id++;
         }   
     }
+
+    for(State * tag : tags) 
+        tag->compute_similarities(inst);
+
+    // current = active_clusters;
+    // while( current != NULL ) {
+    //     cout << current->state->abs_column_id << " ";
+    //     current = current->next;
+    // }
+    // cout << endl;
+
     return active_clusters;
 }
 
@@ -88,6 +99,7 @@ float** Cluster::init_dist_matrix(Cluster* active_clusters, int num_clusters, in
     for(int i = 0; i < num_clusters; i++)
     {
         id_i = cluster_i->state->abs_column_id;
+
         cluster_j = cluster_i->next;
 
         for(int j = i+1; j < num_clusters; j++)
@@ -141,7 +153,7 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
     for (int i = 0; i < inst->total_num_columns; i++) {
         new_state->reachable_states[i] = state_1->reachable_states[i] | state_2->reachable_states[i];
 
-        if ( new_state->reachable_states[i] == 1 ) {
+        if ( new_state->reachable_states[i] ) {
 
             table_id = inst->map[i][0];
             col_id = inst->map[i][1];
@@ -156,9 +168,11 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
     else 
         max_num_states = 2 * inst->total_num_columns - 1;
         
-    while( iter <  max_num_states ) 
-         new_state->reachable_states[iter] = state_1->reachable_states[iter] | state_2->reachable_states[iter];       
-    
+    while( iter <  max_num_states ) {
+        new_state->reachable_states[iter] = state_1->reachable_states[iter] | state_2->reachable_states[iter];       
+        iter++;
+    }
+
     new_state->reachable_states[ abs(state_id) ] = 1;
 
     new_state->compute_similarities(inst);

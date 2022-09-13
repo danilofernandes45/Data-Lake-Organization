@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": ["<", "${workspaceFolder}/${relativeFileDirname}/naive_1.2.txt"],
+            "args": ["<", "${workspaceFolder}/../../Data/Metadatasets/naive_1.2.txt"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

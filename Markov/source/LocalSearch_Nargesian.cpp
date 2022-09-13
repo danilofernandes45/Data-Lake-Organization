@@ -28,6 +28,19 @@ void print_organization(Organization *org)
         
     }
     cout << "\n";
+
+    for (int i = 0; i < org->all_states.size(); i++)
+    {
+        for (State * state : org->all_states[i])
+        {
+            cout << "~ " << state->abs_column_id << " ~" << endl;
+            for(unsigned p = 0; p < org->instance->total_num_columns; p++)
+                cout << state->reach_probs[p] << " ";
+            cout << "\n" << state->overall_reach_prob << endl;
+        }
+        
+    }
+    cout << "\n";
 }
 
 Organization* modify_organization(Organization *org, int level, int level_id, int update_id)
@@ -118,10 +131,9 @@ int main()
     // cout << "effectiveness,ellapsed_time\n";
 
     //TEST
-    org = Organization::generate_organization_by_clustering(instance, gamma);
-    print_organization(org);
-    return 0;
-    //TEST
+    // org = Organization::generate_organization_by_clustering(instance, gamma);
+    // print_organization(org);
+    // //TEST
 
     time(&start);
 
@@ -137,7 +149,7 @@ int main()
 
     cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(end, start) << "\n";
 
-    best_org->success_probabilities();
+    // best_org->success_probabilities();
 
 
     return 0;

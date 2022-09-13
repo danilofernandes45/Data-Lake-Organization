@@ -2,7 +2,9 @@
 
 template<typename T>
 bool CompareLevel::operator()(const T *state_1, const T *state_2) {
-    return state_1->level > state_2->level; 
+    if(state_1->level == state_2->level)
+        return state_1 < state_2;
+    return state_1->level < state_2->level; 
 }
 
 // template<typename T>
@@ -110,7 +112,7 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     if( this->parents.size() > 0 )
     {   
         this->overall_reach_prob = 0;
-        parent = *this->parents.begin();
+        parent = *(this->parents.begin());
         this->level = parent->level + 1;
 
         //FOR EACH INTERESTING TOPIC

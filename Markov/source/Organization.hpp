@@ -7,10 +7,12 @@
 
 #define DEBUG 0
 
-template<typename T>
-bool CompareProb::operator()(const T *state_1, const T *state_2) {
-    return state_1->overall_reach_prob > state_2->overall_reach_prob; 
-}
+class CompareProb
+{
+    public:
+        template<typename T>
+        bool operator()(const T *state_1, const T *state_2);
+};
 
 class Organization
 {

@@ -2,7 +2,9 @@
 
 template<typename T>
 bool CompareProb::operator()(const T *state_1, const T *state_2) {
-    return state_1->overall_reach_prob > state_2->overall_reach_prob; 
+    if( state_1->overall_reach_prob == state_2->overall_reach_prob )
+        return state_1 < state_2;
+    return state_1->overall_reach_prob < state_2->overall_reach_prob; 
 }
 
 void Organization::success_probabilities()
@@ -355,13 +357,7 @@ void Organization::update_ancestors(State *descendant, int update_id)
 
         if( has_changed ) {
             //UPDATE SIMILARITIES IF CHANGES current'S DOMAIN
-            for (int i = 0; i < this->instance->total_num_columns; i++)
-            {
-                table_id = this->instance->map[i][0];
-                col_id = this->instance->map[i][1];
-                sum_vector_i = this->instance->tables[table_id]->sum_vectors[col_id];
-                current->similarities[i] = cossine_similarity(current->sum_vector, sum_vector_i, this->instance->embedding_dim);
-            }
+            current->compute_similarities(this->instance);
             //ITS PARENTS NEED TO BE VERIFIED
             for(State * parent : current->parents) {
                 if( parent->update_id != update_id )
@@ -499,8 +495,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     //WHILE THERE ARE CLUSTERS TO MERGE 
     while(stack != NULL)
     {
-        // printf("Iteration\n\n");
-        // printf("%d ", stack->id);
         prev_nn = NULL;
         nn = active_clusters;
         previous = active_clusters;
@@ -518,7 +512,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
             previous = current;
             current = current->next;
         }
-
         //CHECK IF A PAIR OF RNN WERE FOUND
         diff_dists = 1.0;
         if( stack->is_NN_of != NULL ){
@@ -552,7 +545,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
             // printf("%d\n", nn->id);
             nn->is_NN_of = stack;
             stack = nn;
-
             if( active_clusters == NULL ) {
                 active_clusters = Cluster::merge_clusters(stack, dist_matrix, cluster_id, state_id, inst);
                 cluster_id++;
@@ -561,7 +553,7 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
             }
         }
         //Test!
-        current = stack;
+        // current = stack;
         // printf("Stack: ");
         // while(current != NULL){
         //     printf("%d ", current->id);
