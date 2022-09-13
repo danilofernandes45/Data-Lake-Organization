@@ -56,13 +56,13 @@ Cluster* Cluster::init_clusters(Instance * inst)
                 for (int k = 0; k < inst->tables[i]->tags_table.size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_table[k];
-                    add_parenthood(tags[tag_id], state, inst->embedding_dim);
+                    State::add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
                 //IF THE TAGS ARE RELATED TO THE COLUMNS
                 for (int k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_cols[j][k];
-                    add_parenthood(tags[tag_id], state, inst->embedding_dim);
+                    State::add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
             }
             id++;

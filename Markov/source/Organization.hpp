@@ -2,10 +2,15 @@
 #define ORGANIZATION_HPP
 
 #include "Cluster.hpp"
-#include "Modification.hpp"
+#include "State.hpp"
 #include <algorithm>
 
 #define DEBUG 0
+
+template<typename T>
+bool CompareProb::operator()(const T *state_1, const T *state_2) {
+    return state_1->overall_reach_prob > state_2->overall_reach_prob; 
+}
 
 class Organization
 {

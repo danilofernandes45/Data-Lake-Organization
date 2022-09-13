@@ -1,12 +1,14 @@
 #include "State.hpp"
 
-bool CompareLevel::operator()(const State *state_1, const State *state_2) {
+template<typename T>
+bool CompareLevel::operator()(const T *state_1, const T *state_2) {
     return state_1->level > state_2->level; 
 }
 
-bool CompareProb::operator()(const State *state_1, const State *state_2) {
-    return state_1->overall_reach_prob > state_2->overall_reach_prob; 
-}
+// template<typename T>
+// bool CompareProb::operator()(const T *state_1, const T *state_2) {
+//     return state_1->overall_reach_prob > state_2->overall_reach_prob; 
+// }
 
 bool State::compare(const State *state_1, const State *state_2) {
     return state_1->overall_reach_prob < state_2->overall_reach_prob; 
@@ -14,6 +16,18 @@ bool State::compare(const State *state_1, const State *state_2) {
 
 bool State::compare_id(const State *state_1, const State *state_2) {
     return state_1->abs_column_id < state_2->abs_column_id; 
+}
+
+void State::add_parenthood(State *parent, State *child, int embedding_dim)
+{
+    parent->reachable_states[child->abs_column_id] = 1;
+
+    parent->children.insert(child);
+    child->parents.insert(parent);
+
+    for(int i = 0; i < embedding_dim; i++) {
+        parent->sum_vector[i] += child->sum_vector[i];
+    }
 }
 
 void State::compute_similarities(Instance *inst)

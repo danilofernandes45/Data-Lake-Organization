@@ -14,15 +14,15 @@ void print_organization(Organization *org)
 {
     for (int i = 0; i < org->all_states.size(); i++)
     {
-        for (int j = 0; j < org->all_states[i].size(); j++)
+        for (State * state : org->all_states[i])
         {
-            cout << org->all_states[i][j]->abs_column_id << " (" << org->all_states[i][j]->level << ")\nParents => ";
-            for(int k = 0; k < org->all_states[i][j]->parents.size(); k++)
-                cout << org->all_states[i][j]->parents[k]->abs_column_id << " ";
+            cout << state->abs_column_id << " (" << state->level << ")\nParents => ";
+            for(State * parent : state->parents)
+                cout << parent->abs_column_id << " ";
             
             cout << "\nChildren => ";
-            for(int k = 0; k < org->all_states[i][j]->children.size(); k++)
-                cout << org->all_states[i][j]->children[k]->abs_column_id << " ";
+            for(State * child : state->children)
+                cout << child->abs_column_id << " ";
             cout << "\n";
         }
         

@@ -7,6 +7,20 @@
 #include "utils.hpp"
 using namespace std;
 
+class CompareLevel
+{
+    public:
+        template<typename T>
+        bool operator()(const T *state_1, const T *state_2);
+};
+
+// class CompareProb
+// {
+//     public:
+//         template<typename T>
+//         bool operator()(const T *state_1, const T *state_2);
+// };
+
 class State
 {
     public:
@@ -29,27 +43,10 @@ class State
         State* copy(int total_num_columns, int embedding_dim);
 
         static State* build(Instance *inst, int id, int i, int j);
+        static void add_parenthood(State *parent, State *child, int embedding_dim);
         static bool compare(const State *state_1, const State *state_2);
         static bool compare_id(const State *state_1, const State *state_2);
         // static bool compare_level(const State& state_1, const State& state_2);
-};
-
-class CompareLevel
-{
-    public:
-        bool operator()(const State *state_1, const State *state_2);
-};
-
-class CompareLPL
-{
-    public:
-        bool operator()(const State *state_1, const State *state_2);
-};
-
-class CompareProb
-{
-    public:
-        bool operator()(const State *state_1, const State *state_2);
 };
 
 #endif

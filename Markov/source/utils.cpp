@@ -18,15 +18,3 @@ float cossine_similarity(float *vector_1, float *vector_2, int dim){
     return inner_product / (norm_1 * norm_2);    
 
 }
-
-void add_parenthood(State *parent, State *child, int embedding_dim)
-{
-    parent->reachable_states[child->abs_column_id] = 1;
-
-    parent->children.insert(child);
-    child->parents.insert(parent);
-
-    for(int i = 0; i < embedding_dim; i++) {
-        parent->sum_vector[i] += child->sum_vector[i];
-    }
-}

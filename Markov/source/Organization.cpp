@@ -1,5 +1,10 @@
 #include "Organization.hpp"
 
+template<typename T>
+bool CompareProb::operator()(const T *state_1, const T *state_2) {
+    return state_1->overall_reach_prob > state_2->overall_reach_prob; 
+}
+
 void Organization::success_probabilities()
 {
     State *leaf, *sim_leaf;
@@ -424,7 +429,7 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
     {
         state = State::build(inst, - inst->total_num_columns - i, -1, -1);
         state->is_tag = true;
-        add_parenthood(org->root, state, org->instance->embedding_dim);
+        State::add_parenthood(org->root, state, org->instance->embedding_dim);
         tags.push_back(state);
     }
      
@@ -437,19 +442,19 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
             state->compute_similarities(inst);
             if ( tags.empty() )
             {
-                add_parenthood(org->root, state, org->instance->embedding_dim);
+                State::add_parenthood(org->root, state, org->instance->embedding_dim);
             } else {
                 //IF THE TAGS ARE RELATE TO THE TABLE
                 for (int k = 0; k < inst->tables[i]->tags_table.size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_table[k];
-                    add_parenthood(tags[tag_id], state, inst->embedding_dim);
+                    State::add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
                 //IF THE TAGS ARE RELATED TO THE COLUMNS
                 for (int k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_cols[j][k];
-                    add_parenthood(tags[tag_id], state, inst->embedding_dim);
+                    State::add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
             }
             id++;
