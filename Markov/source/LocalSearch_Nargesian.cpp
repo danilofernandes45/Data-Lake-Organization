@@ -34,7 +34,7 @@ void print_organization(Organization *org)
         for (State * state : org->all_states[i])
         {
             cout << "~ " << state->abs_column_id << " ~" << endl;
-            for(unsigned p = 0; p < org->instance->total_num_columns; p++)
+            for(int p = 0; p < org->instance->total_num_columns; p++)
                 cout << state->reach_probs[p] << " ";
             cout << "\n" << state->overall_reach_prob << endl;
         }
@@ -109,8 +109,11 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
                 update_id = update_id + 2;
             } else {
                 level_id = ( level_id + 1 ) % org->all_states[level].size();
-                if( level_id == 0 )
-                    level = ( level + 1 ) % org->all_states.size();
+                if( level_id == 0 ) {
+                    level++; 
+                    if( level == org->all_states.size() )
+                        level = 2;
+                }
             }
             count++;
         }

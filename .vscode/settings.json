@@ -15,5 +15,6 @@
         "utility": "cpp",
         "valarray": "cpp",
         "string": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }
