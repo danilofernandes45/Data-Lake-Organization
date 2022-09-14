@@ -29,18 +29,18 @@ void print_organization(Organization *org)
     }
     cout << "\n";
 
-    for (int i = 0; i < org->all_states.size(); i++)
-    {
-        for (State * state : org->all_states[i])
-        {
-            cout << "~ " << state->abs_column_id << " ~" << endl;
-            for(int p = 0; p < org->instance->total_num_columns; p++)
-                cout << state->reach_probs[p] << " ";
-            cout << "\n" << state->overall_reach_prob << endl;
-        }
+    // for (int i = 0; i < org->all_states.size(); i++)
+    // {
+    //     for (State * state : org->all_states[i])
+    //     {
+    //         cout << "~ " << state->abs_column_id << " ~" << endl;
+    //         for(int p = 0; p < org->instance->total_num_columns; p++)
+    //             cout << state->reach_probs[p] << " ";
+    //         cout << "\n" << state->overall_reach_prob << endl;
+    //     }
         
-    }
-    cout << "\n";
+    // }
+    // cout << "\n";
 }
 
 Organization* modify_organization(Organization *org, int level, int level_id, int update_id)
@@ -125,7 +125,9 @@ int main()
 {
     Instance * instance = Instance::read_instance();
     float gamma = 1.0;
-    int K_max = 10;
+    // int K_max = 10;
+    int K_max = 1;
+
     Organization *org, *new_org, *best_org = NULL;
 
     //PERFORMANCE EVALUATION
@@ -143,7 +145,8 @@ int main()
     org = Organization::generate_organization_by_clustering(instance, gamma);
     for (int i = 0; i < K_max; i++)
     {
-        new_org = local_search(org, 40, 0.05);
+        // new_org = local_search(org, 40, 0.05);
+        new_org = local_search(org, 5, 0.05);
         if( best_org == NULL || new_org->effectiveness > best_org->effectiveness )
             best_org = new_org;
     }

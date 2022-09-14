@@ -181,17 +181,18 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     set<State*> deleted_states; // Binary tree
     vector<State*> grandpas;
     State * current = *next(this->all_states[level].begin(), level_id); //GET ELEMENT AT POSITION level_id
-    State * deleted_parent = *current->parents.begin();
+    State * deleted_parent = *(current->parents.begin());
     set<State*>::iterator iter;
     //FIND THE LEAST REACHABLE PARENT
     for( iter = next(current->parents.begin()); iter != current->parents.end(); iter++){
         if( (*iter)->overall_reach_prob < deleted_parent->overall_reach_prob )
             deleted_parent = *iter;
     }
+
     //FIND THE deleted_parent's SIBILINGS
     for( State * grandpa : deleted_parent->parents ) {
         for( State * sibiling : grandpa->children ) {
-            if( sibiling == deleted_parent || !sibiling->is_tag )
+            if( sibiling == deleted_parent || !sibiling->is_tag && sibiling->children.size() > 0 )
                     deleted_states.insert(sibiling); // O(log N)
         }
     }
