@@ -254,6 +254,7 @@ void Organization::add_parent(int level, int level_id, int update_id)
         best_candidate->children.insert(current); // O(log N)
         //UPDATE DOMAINS AND PROBABILITIES
         this->update_reachable_states(current, best_candidate);
+        best_candidate->compute_similarities(this->instance);
         this->update_ancestors(best_candidate, update_id);
         this->update_effectiveness();
     }

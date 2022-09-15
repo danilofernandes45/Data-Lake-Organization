@@ -29,18 +29,18 @@ void print_organization(Organization *org)
     }
     cout << "\n";
 
-    // for (int i = 0; i < org->all_states.size(); i++)
-    // {
-    //     for (State * state : org->all_states[i])
-    //     {
-    //         cout << "~ " << state->abs_column_id << " ~" << endl;
-    //         for(int p = 0; p < org->instance->total_num_columns; p++)
-    //             cout << state->reach_probs[p] << " ";
-    //         cout << "\n" << state->overall_reach_prob << endl;
-    //     }
+    for (int i = 0; i < org->all_states.size(); i++)
+    {
+        for (State * state : org->all_states[i])
+        {
+            cout << "~ " << state->abs_column_id << " ~" << endl;
+            for(int p = 0; p < org->instance->total_num_columns; p++)
+                cout << state->reach_probs[p] << " ";
+            cout << "\n" << state->overall_reach_prob << endl;
+        }
         
-    // }
-    // cout << "\n";
+    }
+    cout << "\n";
 }
 
 Organization* modify_organization(Organization *org, int level, int level_id, int update_id)
