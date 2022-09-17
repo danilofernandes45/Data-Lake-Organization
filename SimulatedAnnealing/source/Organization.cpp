@@ -101,11 +101,14 @@ void Organization::update_effectiveness()
 //INITIALIZE all_states, CONSIDERING THAT ALL STATES HAVE ONLY ONE PARENT
 void Organization::init_all_states()
 {
+    int count = 0;
+
     State * current;
     queue<State*> queue;
     queue.push(this->root);
     //INITIALIZE SOURCE NODE PROPERTIES
     this->root->level = 0;
+    this->root->update_id = 0;
     this->root->overall_reach_prob = 1.0;
     this->root->reach_probs = new float[this->instance->total_num_columns];
     for (int i = 0; i < this->instance->total_num_columns; i++)
@@ -115,6 +118,7 @@ void Organization::init_all_states()
         //REMOVE FROM QUEUE
         current = queue.front();
         queue.pop();
+        cout << count << endl;
         //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
         //FILL all_states WITH NECESSARY SETS
@@ -123,11 +127,16 @@ void Organization::init_all_states()
 
         this->all_states[current->level].insert(current);
 
-        if( current->children.size() > 0) {
-            //ADD ITS CHILDREN IN THE QUEUE
-            for (State * child : current->children)
+        //ADD ITS CHILDREN IN THE QUEUE
+        for (State * child : current->children) {
+            if( child->update_id != 0 ) {
+                child->update_id = 0;
                 queue.push(child);
-        } else {
+            }
+        }
+
+        if( current->children.empty() ) {
+            count++;
             this->leaves.push_back(current);
         }
     }      
@@ -552,7 +561,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
                 prev_nn->next = nn->next;
             
             //ADD NN TO THE NN CHAIN
-            // printf("%d\n", nn->id);
             nn->is_NN_of = stack;
             stack = nn;
             if( active_clusters == NULL ) {
