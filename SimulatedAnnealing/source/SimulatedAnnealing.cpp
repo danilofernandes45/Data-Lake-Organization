@@ -16,18 +16,29 @@ void print_organization(Organization *org)
 {
     for (int i = 0; i < org->all_states.size(); i++)
     {
-        for (int j = 0; j < org->all_states[i].size(); j++)
+        for (State * state : org->all_states[i])
         {
-            cout << org->all_states[i][j]->abs_column_id << " (" << org->all_states[i][j]->level << ")\nParents => ";
-            for(int k = 0; k < org->all_states[i][j]->parents.size(); k++)
-                cout << org->all_states[i][j]->parents[k]->abs_column_id << " ";
+            cout << state->abs_column_id << " (" << state->level << ")\nParents => ";
+            for(State * parent : state->parents)
+                cout << parent->abs_column_id << " ";
             
             cout << "\nChildren => ";
-            for(int k = 0; k < org->all_states[i][j]->children.size(); k++)
-                cout << org->all_states[i][j]->children[k]->abs_column_id << " ";
+            for(State * child : state->children)
+                cout << child->abs_column_id << " ";
             cout << "\n";
+        }
+        
+    }
+    cout << "\n";
 
-            cout << "Overall reach probs " << org->all_states[i][j]->overall_reach_prob << endl;
+    for (int i = 0; i < org->all_states.size(); i++)
+    {
+        for (State * state : org->all_states[i])
+        {
+            cout << "~ " << state->abs_column_id << " ~" << endl;
+            for(int p = 0; p < org->instance->total_num_columns; p++)
+                cout << state->reach_probs[p] << " ";
+            cout << "\n" << state->overall_reach_prob << endl;
         }
         
     }
@@ -41,7 +52,7 @@ void perturbation(Organization *org, int update_id)
     mt19937 generator(rand_dev());
     uniform_real_distribution<double> distribution(0.0, 1.0);
     double x, sum = 0;
-    int level, level_id;
+    int level, level_id, i;
 
     //Harmonic number
     double H_n = 0;
@@ -59,18 +70,20 @@ void perturbation(Organization *org, int update_id)
     }
 
     H_n = 0.0;
-    for(int i = 0; i < org->all_states[level].size(); i++)
-        H_n = H_n + ( 1 / org->all_states[level][i]->overall_reach_prob );
+    for(State * state : org->all_states[level])
+        H_n = H_n + ( 1 / state->overall_reach_prob );
 
     //RANDOM SELECTION OF LEVEL (ROULLETE WHEEL)
     sum = 0.0;
+    i = 0;
     x = distribution(generator) * H_n;
-    for(int i = 0; i < org->all_states[level].size(); i++) {
-        sum = sum + ( 1 / org->all_states[level][i]->overall_reach_prob );
+    for(State * state : org->all_states[level]) {
+        sum = sum + ( 1 / state->overall_reach_prob );
         if( x < sum ){
             level_id = i;
             break;
         }
+        i++;
     }
     
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -103,13 +116,14 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
             delta = org->effectiveness - new_org->effectiveness;
             if( delta < 0 || distribution(generator) < exp(-delta/T) ) {
                 org = new_org->copy();
-                update_id++;
+                update_id = update_id + 2;
                 if( org->effectiveness > best_org->effectiveness ) {
                     best_org = org;
                     count = 0;
                 }
             } else {
-                new_org->undo_last_operation(org);
+                // new_org->undo_last_operation(org);
+                new_org = org->copy();
             }
             if( new_org->all_states.size() == 2 )
                 new_org = best_org->copy();
@@ -155,7 +169,10 @@ int main()
     // org = iterated_local_search(instance, gamma, 5);
 
     // org = simulated_annealing(org, 30, 0.001, 100);
-    org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
+    // org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
+
+    org = multistart_sa(instance, gamma, 1, 2, 0.001, 20);
+
 
     time(&end);
 

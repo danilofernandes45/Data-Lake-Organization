@@ -79,6 +79,18 @@ Cluster* Cluster::init_clusters(Instance * inst)
     // }
     // cout << endl;
 
+    // previous = NULL;
+    // current = active_clusters;
+    // while( current != NULL ) {
+    //     if( current->state->children.size() == 0 ) {
+    //         previous->next = current->next;
+    //         current = current->next;
+    //     } else {
+    //         previous = current;
+    //         current = current->next;
+    //     }
+    // }
+
     return active_clusters;
 }
 

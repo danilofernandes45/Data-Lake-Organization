@@ -227,9 +227,6 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     //UPDATE DESCEDANTS
     this->update_descendants(&grandpas, update_id);
     this->update_effectiveness();
-    //REMOVE EMPTY LEVELS FROM all_states
-    while( this->all_states[-1].empty() )
-        this->all_states.pop_back(); // O(1)
 }
 
 void Organization::add_parent(int level, int level_id, int update_id)
@@ -304,6 +301,9 @@ void Organization::update_descendants(vector<State*> * ancestors, int update_id)
         //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
         this->all_states[current->level].insert(current); //O(log N)
     }
+    //REMOVE EMPTY LEVELS FROM all_states
+    while( this->all_states.back().empty() )
+        this->all_states.pop_back(); // O(1)
 }
 
 int Organization::update_reachable_states(State * descendant, State * current)
@@ -377,8 +377,8 @@ void Organization::update_ancestors(State *descendant, int update_id)
     }
     //UPDATE REMAINING ANCESTORS'reachable_states (UPWARD)
     while( !reach_queue.empty() ) {
-        current = queue.front();
-        queue.pop();
+        current = reach_queue.front();
+        reach_queue.pop();
         has_changed = 0;
         current->update_id = update_id;
         id = this->instance->total_num_columns;
