@@ -173,7 +173,6 @@ int main()
 
     // org = multistart_sa(instance, gamma, 1, 2, 0.001, 20);
 
-
     time(&end);
 
     cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(end, start) << "\n";

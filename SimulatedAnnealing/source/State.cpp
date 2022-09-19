@@ -109,6 +109,12 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     int num_children;
     set<State*>::iterator iter_p, iter_c;
 
+    cout << this->abs_column_id << " - " << this->parents.size() << endl;
+    for(int i = 0; i < 300; i++)
+        cout << this->sum_vector[i] << " ";
+
+    cout << endl;
+
     if( this->parents.size() > 0 )
     {   
         this->overall_reach_prob = 0;

@@ -7,6 +7,39 @@
 //     return state_1->overall_reach_prob < state_2->overall_reach_prob; 
 // }
 
+//TOPOLOGICAL SORT - APPROACH BASED ON DFS
+void topological_sort(vector<State*> * ancestors, vector<State*> * stack, int update_id)
+{
+    State *current;
+    vector<State*> path;
+    path.push_back( ancestors->back() );
+    ancestors->pop_back();
+
+    while( !path.empty() ) {
+        //GET THE TOP STATE FROM THE STACK
+        current = path.back();
+        //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN VISITED
+        if( current->update_id == update_id ) {
+            path.pop_back();
+            stack->push_back(current);
+        } else {
+            //ADD ITS CHILDREN TO THE STACK
+            for( State * child : current->children ) {
+                if( child->update_id != update_id )
+                    path.push_back(child);
+            }
+            current->update_id = update_id;
+        }
+        //ADD AN UNVISITED STATE INTO THE PATH WHEN IT IS EMPTY
+        while( path.empty() && !ancestors->empty() ) {
+            current = ancestors->back();
+            ancestors->pop_back();
+            if( current->update_id != update_id ) 
+                path.push_back( current );
+        }
+    }
+}
+
 void Organization::success_probabilities()
 {
     State *leaf, *sim_leaf;
@@ -101,44 +134,33 @@ void Organization::update_effectiveness()
 //INITIALIZE all_states, CONSIDERING THAT ALL STATES HAVE ONLY ONE PARENT
 void Organization::init_all_states()
 {
-    int count = 0;
-
     State * current;
-    queue<State*> queue;
-    queue.push(this->root);
     //INITIALIZE SOURCE NODE PROPERTIES
     this->root->level = 0;
-    this->root->update_id = 0;
     this->root->overall_reach_prob = 1.0;
     this->root->reach_probs = new float[this->instance->total_num_columns];
     for (int i = 0; i < this->instance->total_num_columns; i++)
         this->root->reach_probs[i] = 1.0;
 
-    while( !queue.empty() ){
-        //REMOVE FROM QUEUE
-        current = queue.front();
-        queue.pop();
-        cout << count << endl;
+    vector<State*> ancestors;
+    ancestors.push_back(this->root);
+    vector<State*> stack;
+    topological_sort(&ancestors, &stack, 0);
+    
+    //UPDATE THE STATES ORDERED BY TOPOLOGICAL SORT
+    while ( !stack.empty() ) 
+    {   
+        current = stack.back();
+        stack.pop_back();
         //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
-        //FILL all_states WITH NECESSARY SETS
-        while(this->all_states.size() <= current->level)
+        while( this->all_states.size() <= current->level )
             this->all_states.push_back(*(new set<State*>));
+        //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
+        this->all_states[current->level].insert(current); //O(log N)
 
-        this->all_states[current->level].insert(current);
-
-        //ADD ITS CHILDREN IN THE QUEUE
-        for (State * child : current->children) {
-            if( child->update_id != 0 ) {
-                child->update_id = 0;
-                queue.push(child);
-            }
-        }
-
-        if( current->children.empty() ) {
-            count++;
+        if( current->children.empty() )
             this->leaves.push_back(current);
-        }
     }      
 }
 
@@ -267,38 +289,12 @@ void Organization::add_parent(int level, int level_id, int update_id)
 }
 
 //IMPLEMENTATION CONSIDERING THE PARENTS OF A STATE ARE IN DIFFERENT LEVELS
-//TOPOLOGICAL SORT - APPROACH BASED ON DFS
 void Organization::update_descendants(vector<State*> * ancestors, int update_id)
 {
     int old_level;
     State *current;
-    vector<State*> path, stack;
-    path.push_back( ancestors->back() );
-    ancestors->pop_back();
-
-    while( !path.empty() ) {
-        //GET THE TOP STATE FROM THE STACK
-        current = path.back();
-        //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN VISITED
-        if( current->update_id == update_id ) {
-            path.pop_back();
-            stack.push_back(current);
-        } else {
-            //ADD ITS CHILDREN TO THE STACK
-            for( State * child : current->children ) {
-                if( child->update_id != update_id )
-                    path.push_back(child);
-            }
-            current->update_id = update_id;
-        }
-        //ADD AN UNVISITED STATE INTO THE PATH WHEN IT IS EMPTY
-        while( path.empty() && !ancestors->empty() ) {
-            current = ancestors->back();
-            ancestors->pop_back();
-            if( current->update_id != update_id ) 
-                path.push_back( current );
-        }
-    }
+    vector<State*> stack;
+    topological_sort(ancestors, &stack, update_id);
     //UPDATE THE STATES ORDERED BY TOPOLOGICAL SORT
     while ( !stack.empty() ) 
     {   
