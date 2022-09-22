@@ -3,7 +3,7 @@
 template<typename T>
 bool CompareLevel::operator()(const T *state_1, const T *state_2) {
     if(state_1->level == state_2->level)
-        return state_1 < state_2;
+        return state_1->abs_column_id < state_2->abs_column_id;
     return state_1->level < state_2->level; 
 }
 
@@ -109,11 +109,11 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     int num_children;
     set<State*>::iterator iter_p, iter_c;
 
-    cout << this->abs_column_id << " - " << this->parents.size() << endl;
-    for(int i = 0; i < 300; i++)
-        cout << this->sum_vector[i] << " ";
+    // cout << this->abs_column_id << " - " << this->parents.size() << endl;
+    // for(int i = 0; i < 300; i++)
+    //     cout << this->sum_vector[i] << " ";
 
-    cout << endl;
+    // cout << endl;
 
     if( this->parents.size() > 0 )
     {   

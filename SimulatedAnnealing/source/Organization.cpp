@@ -7,6 +7,11 @@
 //     return state_1->overall_reach_prob < state_2->overall_reach_prob; 
 // }
 
+template<typename T>
+bool CompareID::operator()(const T *state_1, const T *state_2) {
+    return state_1->abs_column_id < state_2->abs_column_id; 
+}
+
 //TOPOLOGICAL SORT - APPROACH BASED ON DFS
 void topological_sort(vector<State*> * ancestors, vector<State*> * stack, int update_id)
 {
@@ -155,13 +160,14 @@ void Organization::init_all_states()
         //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
         while( this->all_states.size() <= current->level )
-            this->all_states.push_back(*(new set<State*>));
+            this->all_states.push_back(*(new set<State*, CompareID>));
         //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
         this->all_states[current->level].insert(current); //O(log N)
 
         if( current->children.empty() )
             this->leaves.push_back(current);
-    }      
+    }
+    cout << this->all_states.size() << endl;
 }
 
 Organization* Organization::copy()
@@ -175,11 +181,11 @@ Organization* Organization::copy()
     State *copied_state;
     for(int i = 0; i < this->all_states.size(); i++)
     {
-        set<State*> states;
+        set<State*, CompareID> states;
         for (State * state : this->all_states[i] ){
             copied_state = state->copy(this->instance->total_num_columns, this->instance->embedding_dim);
             states.insert( copied_state );
-            if( state->children.size() == 0 )
+            if( state->children.empty() )
                 copy->leaves.push_back(copied_state);
         }
         copy->all_states.push_back(states);
@@ -263,7 +269,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
 void Organization::add_parent(int level, int level_id, int update_id)
 {
     State *current = *next(this->all_states[level].begin(), level_id);
-    set<State*> * candidates = &this->all_states[level-1];
+    set<State*, CompareID> * candidates = &this->all_states[level-1];
     set<State*>::iterator iter = candidates->end();
     State *best_candidate = NULL;
     int id;

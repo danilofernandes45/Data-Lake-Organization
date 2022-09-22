@@ -171,7 +171,12 @@ int main()
     // org = simulated_annealing(org, 30, 0.001, 100);
     // org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
 
-    // org = multistart_sa(instance, gamma, 1, 2, 0.001, 20);
+    for(State * state : org->root->parents)
+        cout << state->abs_column_id << " - ";
+
+    cout << endl;
+
+    org = multistart_sa(instance, gamma, 1, 2, 0.001, 20);
 
     time(&end);
 

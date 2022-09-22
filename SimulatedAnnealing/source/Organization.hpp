@@ -7,12 +7,12 @@
 
 #define DEBUG 0
 
-// class CompareProb
-// {
-//     public:
-//         template<typename T>
-//         bool operator()(const T *state_1, const T *state_2);
-// };
+class CompareID
+{
+    public:
+        template<typename T>
+        bool operator()(const T *state_1, const T *state_2);
+};
 
 class Organization
 {
@@ -20,7 +20,7 @@ class Organization
         Instance *instance = NULL;
         State *root = NULL;
         float gamma; // HYPERPARAMETER USED IN PROBABILITY ESTIMATION
-        vector< set<State*> > all_states;
+        vector< set<State*, CompareID> > all_states;
         vector<State*> leaves;
         float effectiveness;
         int max_num_states;
