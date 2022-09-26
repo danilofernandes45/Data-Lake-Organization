@@ -7,12 +7,12 @@
 
 #define DEBUG 0
 
-class CompareID
-{
-    public:
-        template<typename T>
-        bool operator()(const T *state_1, const T *state_2);
-};
+// class CompareID
+// {
+//     public:
+//         template<typename T>
+//         bool operator()(const T *state_1, const T *state_2);
+// };
 
 class Organization
 {

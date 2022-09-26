@@ -7,6 +7,11 @@ bool CompareLevel::operator()(const T *state_1, const T *state_2) {
     return state_1->level < state_2->level; 
 }
 
+template<typename T>
+bool CompareID::operator()(const T *state_1, const T *state_2) {
+    return state_1->abs_column_id < state_2->abs_column_id; 
+}
+
 // template<typename T>
 // bool CompareProb::operator()(const T *state_1, const T *state_2) {
 //     return state_1->overall_reach_prob > state_2->overall_reach_prob; 

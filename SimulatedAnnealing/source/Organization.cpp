@@ -7,10 +7,10 @@
 //     return state_1->overall_reach_prob < state_2->overall_reach_prob; 
 // }
 
-template<typename T>
-bool CompareID::operator()(const T *state_1, const T *state_2) {
-    return state_1->abs_column_id < state_2->abs_column_id; 
-}
+// template<typename T>
+// bool CompareID::operator()(const T *state_1, const T *state_2) {
+//     return state_1->abs_column_id < state_2->abs_column_id; 
+// }
 
 //TOPOLOGICAL SORT - APPROACH BASED ON DFS
 void topological_sort(vector<State*> * ancestors, vector<State*> * stack, int update_id)
@@ -314,6 +314,16 @@ void Organization::update_descendants(vector<State*> * ancestors, int update_id)
             this->all_states[old_level].erase(current); //O(log N)
             //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
             this->all_states[current->level].insert(current); //O(log N)
+
+            // for(State *parent : current->parents){
+            //     parent->children.erase(current);
+            //     parent->children.insert(current);
+            // }
+
+            for(State *child : current->children){
+                child->parents.erase(current);
+                child->parents.insert(current);
+            }
         }
     }
 

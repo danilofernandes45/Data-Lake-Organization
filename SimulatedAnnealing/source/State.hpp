@@ -14,6 +14,13 @@ class CompareLevel
         bool operator()(const T *state_1, const T *state_2);
 };
 
+class CompareID
+{
+    public:
+        template<typename T>
+        bool operator()(const T *state_1, const T *state_2);
+};
+
 // class CompareProb
 // {
 //     public:
@@ -30,7 +37,7 @@ class State
         float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
         float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
         set<State*, CompareLevel> parents;
-        set<State*, CompareLevel> children;
+        set<State*, CompareID> children;
         float *similarities; //VECTOR WITH SIMILARITIES BETWEEN THIS STATE AND ALL INTERESTING TOPICS IN DL
         // bool *domain; // BINARY VECTOR WHICH DEFINES THE COLUMNS ARE CONTAINED BY THE STATE
         bool *reachable_states; // BINARY VECTOR WHICH DEFINES THE REACHABLE STATES FROM THIS. THE FIRST |A| POSITIONS INDICATE THE COLUMNS, THEN THESE DEFINES THE STATE DOMAIN
