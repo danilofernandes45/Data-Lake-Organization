@@ -66,16 +66,16 @@ void compare_orgs(Organization *org, Organization *new_org)
             assert( (*iter_1)->parents.size() == (*iter_2)->parents.size() );
             assert( (*iter_1)->children.size() == (*iter_2)->children.size() );
 
-            cout << "Parents" << endl;
-            state_1 = (*iter_1)->parents.begin();
-            state_2 = (*iter_2)->parents.begin();
-            for (int s = 0; s < (*iter_1)->parents.size(); s++)
-            {
-                cout << (*state_1)->level << " " << (*state_1)->abs_column_id << " " << (*state_2)->level << " " << (*state_2)->abs_column_id << endl;
-                state_1++;
-                state_2++;
-            }
-            cout << endl;
+            // cout << "Parents" << endl;
+            // state_1 = (*iter_1)->parents.begin();
+            // state_2 = (*iter_2)->parents.begin();
+            // for (int s = 0; s < (*iter_1)->parents.size(); s++)
+            // {
+            //     cout << (*state_1)->level << " " << (*state_1)->abs_column_id << " " << (*state_2)->level << " " << (*state_2)->abs_column_id << endl;
+            //     state_1++;
+            //     state_2++;
+            // }
+            // cout << endl;
 
             state_1 = (*iter_1)->parents.begin();
             state_2 = (*iter_2)->parents.begin();
@@ -86,17 +86,17 @@ void compare_orgs(Organization *org, Organization *new_org)
                 state_2++;
             }
 
-            cout << "Children" << endl;
-            state_1 = (*iter_1)->children.begin();
-            state_2 = (*iter_2)->children.begin();
-            for (int s = 0; s < (*iter_1)->children.size(); s++)
-            {
-                cout << (*state_1)->level << " " << (*state_1)->abs_column_id << " " << (*state_2)->level << " " << (*state_2)->abs_column_id << endl;
-                state_1++;
-                state_2++;
-            }
+            // cout << "Children" << endl;
+            // state_1 = (*iter_1)->children.begin();
+            // state_2 = (*iter_2)->children.begin();
+            // for (int s = 0; s < (*iter_1)->children.size(); s++)
+            // {
+            //     cout << (*state_1)->level << " " << (*state_1)->abs_column_id << " " << (*state_2)->level << " " << (*state_2)->abs_column_id << endl;
+            //     state_1++;
+            //     state_2++;
+            // }
 
-            cout << endl;
+            // cout << endl;
 
 
             state_1 = (*iter_1)->children.begin();
@@ -168,7 +168,7 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
     int update_id = 1;
     Organization *best_org = org;
     Organization *new_org = org->copy();
-    compare_orgs(org, new_org);
+    // compare_orgs(org, new_org);
     float T = org->effectiveness;
     float T_min = pow(alpha, 10000);
     float delta;
@@ -196,7 +196,7 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
                 new_org = org->copy();
             }
 
-            compare_orgs(org, new_org);
+            // compare_orgs(org, new_org);
 
             if( new_org->all_states.size() == 2 )
                 new_org = best_org->copy();
@@ -233,7 +233,7 @@ int main()
 
     // org = Organization::generate_basic_organization(instance, gamma);
     // cout << org->effectiveness << " " << org->all_states.size() << endl;
-    org = Organization::generate_organization_by_clustering(instance, gamma);
+    // org = Organization::generate_organization_by_clustering(instance, gamma);
     // cout << org->effectiveness << " " << org->all_states.size() << endl;
     // org = Organization::generate_organization_by_heuristic(instance, gamma);
     // cout << org->effectiveness << " " << org->all_states.size() << endl;
@@ -245,12 +245,7 @@ int main()
     // org = simulated_annealing(org, 30, 0.001, 100);
     // org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
 
-    for(State * state : org->root->parents)
-        cout << state->abs_column_id << " - ";
-
-    cout << endl;
-
-    org = multistart_sa(instance, gamma, 1, 2, 0.001, 20);
+    org = multistart_sa(instance, gamma, 10, 10, 0.001, 10);
 
     time(&end);
 

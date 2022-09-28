@@ -7,7 +7,7 @@
 
 #define DEBUG 0
 
-// class CompareID
+// class CompareProb
 // {
 //     public:
 //         template<typename T>

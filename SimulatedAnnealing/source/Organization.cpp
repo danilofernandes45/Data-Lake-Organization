@@ -158,6 +158,7 @@ void Organization::init_all_states()
         current = stack.back();
         stack.pop_back();
         //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
+        current->update_level();
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
         while( this->all_states.size() <= current->level )
             this->all_states.push_back(*(new set<State*, CompareID>));
@@ -167,7 +168,6 @@ void Organization::init_all_states()
         if( current->children.empty() )
             this->leaves.push_back(current);
     }
-    cout << this->all_states.size() << endl;
 }
 
 Organization* Organization::copy()
@@ -176,6 +176,7 @@ Organization* Organization::copy()
     copy->instance = this->instance;
     copy->gamma = this->gamma;
     copy->effectiveness = this->effectiveness;
+    copy->max_num_states = this->max_num_states;
 
     set<State*>::iterator iter, iter_copy;
     State *copied_state;
@@ -183,7 +184,7 @@ Organization* Organization::copy()
     {
         set<State*, CompareID> states;
         for (State * state : this->all_states[i] ){
-            copied_state = state->copy(this->instance->total_num_columns, this->instance->embedding_dim);
+            copied_state = state->copy(this->instance->total_num_columns, this->max_num_states, this->instance->embedding_dim);
             states.insert( copied_state );
             if( state->children.empty() )
                 copy->leaves.push_back(copied_state);
@@ -278,8 +279,8 @@ void Organization::add_parent(int level, int level_id, int update_id)
         iter--;
         id = abs( (*iter)->abs_column_id );
         if( (*iter)->children.size() > 0 && !current->reachable_states[id] && current->parents.find(*iter) == current->parents.end() ) {
-            best_candidate = *iter;
-            break;
+            if(best_candidate == NULL || best_candidate->overall_reach_prob < (*iter)->overall_reach_prob)
+                best_candidate = *iter;
         } 
     }
 
@@ -308,22 +309,13 @@ void Organization::update_descendants(vector<State*> * ancestors, int update_id)
         stack.pop_back();
         old_level = current->level;
         //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
+        current->update_level();
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
         if( old_level != current->level ){
             //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
             this->all_states[old_level].erase(current); //O(log N)
             //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
             this->all_states[current->level].insert(current); //O(log N)
-
-            // for(State *parent : current->parents){
-            //     parent->children.erase(current);
-            //     parent->children.insert(current);
-            // }
-
-            for(State *child : current->children){
-                child->parents.erase(current);
-                child->parents.insert(current);
-            }
         }
     }
 

@@ -45,9 +45,10 @@ class State
         int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED INTO TOPOLOGICAL SORT
         bool is_tag; //IF THE STATE REPRESENTS A TAG
 
+        void update_level();
         void update_reach_probs(float gamma, int total_num_columns);
         void compute_similarities(Instance *inst);
-        State* copy(int total_num_columns, int embedding_dim);
+        State* copy(int total_num_columns, int max_num_states, int embedding_dim);
 
         static State* build(Instance *inst, int id, int i, int j);
         static void add_parenthood(State *parent, State *child, int embedding_dim);

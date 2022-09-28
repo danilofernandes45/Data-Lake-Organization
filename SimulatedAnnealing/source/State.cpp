@@ -78,7 +78,7 @@ State* State::build(Instance *inst, int id, int i, int j)
     return state;
 }
 
-State* State::copy(int total_num_columns, int embedding_dim)
+State* State::copy(int total_num_columns, int max_num_states, int embedding_dim)
 {
     State *copy = new State;
     copy->level = this->level;
@@ -99,17 +99,38 @@ State* State::copy(int total_num_columns, int embedding_dim)
     for (int i = 0; i < total_num_columns; i++)
         copy->similarities[i] = this->similarities[i];
 
-    copy->reachable_states = new bool[2*total_num_columns-1];
-    for (int i = 0; i < 2*total_num_columns-1; i++)
+    copy->reachable_states = new bool[max_num_states];
+    for (int i = 0; i < max_num_states; i++)
         copy->reachable_states[i] = this->reachable_states[i];
 
     // DON'T COPY PARENTS AND CHILDREN HERE
     return copy;  
 }
 
+void State::update_level()
+{
+    int old_level, new_level;
+    if( this->parents.size() > 0 )
+    {   
+        old_level = this->level;
+        new_level = (*(this->parents.begin()))->level + 1;
+        
+        if(old_level != new_level){
+            //UPDATE THE BINARY IN ITS CHILDREN IN ORDER TO KEEP THE LEVEL ORDER OF PARENTS
+            for(State * child : this->children)
+                child->parents.erase(this);
+
+            this->level = new_level;
+
+            for(State * child : this->children)
+                child->parents.insert(this);
+        }
+    }   
+}
+
 void State::update_reach_probs(float gamma, int total_num_columns)
 {
-    State *parent;
+    // State *parent;
     float sum_probs, prob;
     int num_children;
     set<State*>::iterator iter_p, iter_c;
@@ -123,8 +144,8 @@ void State::update_reach_probs(float gamma, int total_num_columns)
     if( this->parents.size() > 0 )
     {   
         this->overall_reach_prob = 0;
-        parent = *(this->parents.begin());
-        this->level = parent->level + 1;
+        // parent = *(this->parents.begin());
+        // this->level = parent->level + 1;
 
         //FOR EACH INTERESTING TOPIC
         for (int i = 0; i < total_num_columns; i++) {
