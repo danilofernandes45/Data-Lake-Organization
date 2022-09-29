@@ -2,9 +2,42 @@
 
 template<typename T>
 bool CompareProb::operator()(const T *state_1, const T *state_2) {
-    if( state_1->overall_reach_prob == state_2->overall_reach_prob )
-        return state_1 < state_2;
+    if(state_1->overall_reach_prob == state_2->overall_reach_prob)
+        return state_1->abs_column_id < state_2->abs_column_id;
     return state_1->overall_reach_prob < state_2->overall_reach_prob; 
+}
+
+//TOPOLOGICAL SORT - APPROACH BASED ON DFS
+void topological_sort(vector<State*> * ancestors, vector<State*> * stack, int update_id)
+{
+    State *current;
+    vector<State*> path;
+    path.push_back( ancestors->back() );
+    ancestors->pop_back();
+
+    while( !path.empty() ) {
+        //GET THE TOP STATE FROM THE STACK
+        current = path.back();
+        //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN VISITED
+        if( current->update_id == update_id ) {
+            path.pop_back();
+            stack->push_back(current);
+        } else {
+            //ADD ITS CHILDREN TO THE STACK
+            for( State * child : current->children ) {
+                if( child->update_id != update_id )
+                    path.push_back(child);
+            }
+            current->update_id = update_id;
+        }
+        //ADD AN UNVISITED STATE INTO THE PATH WHEN IT IS EMPTY
+        while( path.empty() && !ancestors->empty() ) {
+            current = ancestors->back();
+            ancestors->pop_back();
+            if( current->update_id != update_id ) 
+                path.push_back( current );
+        }
+    }
 }
 
 void Organization::success_probabilities()
@@ -102,8 +135,6 @@ void Organization::update_effectiveness()
 void Organization::init_all_states()
 {
     State * current;
-    queue<State*> queue;
-    queue.push(this->root);
     //INITIALIZE SOURCE NODE PROPERTIES
     this->root->level = 0;
     this->root->overall_reach_prob = 1.0;
@@ -111,26 +142,34 @@ void Organization::init_all_states()
     for (int i = 0; i < this->instance->total_num_columns; i++)
         this->root->reach_probs[i] = 1.0;
 
-    while( !queue.empty() ){
-        //REMOVE FROM QUEUE
-        current = queue.front();
-        queue.pop();
+    vector<State*> ancestors;
+    ancestors.push_back(this->root);
+    vector<State*> stack;
+    topological_sort(&ancestors, &stack, 0);
+    
+    //UPDATE THE STATES ORDERED BY TOPOLOGICAL SORT
+    while ( !stack.empty() ) 
+    {   
+        current = stack.back();
+        stack.pop_back();
         //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
+        current->update_level();
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
-        //FILL all_states WITH NECESSARY SETS
-        while(this->all_states.size() <= current->level)
+        while( this->all_states.size() <= current->level )
             this->all_states.push_back(*(new set<State*, CompareProb>));
+        //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
+        this->all_states[current->level].insert(current); //O(log N)
 
-        this->all_states[current->level].insert(current);
-
-        if( current->children.size() > 0) {
-            //ADD ITS CHILDREN IN THE QUEUE
-            for (State * child : current->children)
-                queue.push(child);
-        } else {
+        if( current->children.empty() )
             this->leaves.push_back(current);
-        }
-    }      
+    }
+
+    cout << this->leaves.size() << " ";
+    cout << this->instance->total_num_columns << endl;
+
+    for(State *state : this->leaves)
+        cout << state->abs_column_id << " ";
+    cout << endl;
 }
 
 Organization* Organization::copy()
@@ -139,16 +178,17 @@ Organization* Organization::copy()
     copy->instance = this->instance;
     copy->gamma = this->gamma;
     copy->effectiveness = this->effectiveness;
+    copy->max_num_states = this->max_num_states;
 
-    set<State*, CompareProb>::iterator iter, iter_copy;
+    set<State*>::iterator iter, iter_copy;
     State *copied_state;
     for(int i = 0; i < this->all_states.size(); i++)
     {
         set<State*, CompareProb> states;
         for (State * state : this->all_states[i] ){
-            copied_state = state->copy(this->instance->total_num_columns, this->instance->embedding_dim);
+            copied_state = state->copy(this->instance->total_num_columns, this->max_num_states, this->instance->embedding_dim);
             states.insert( copied_state );
-            if( state->children.size() == 0 )
+            if( state->children.empty() )
                 copy->leaves.push_back(copied_state);
         }
         copy->all_states.push_back(states);
@@ -188,7 +228,6 @@ void Organization::delete_parent(int level, int level_id, int update_id)
         if( (*iter)->overall_reach_prob < deleted_parent->overall_reach_prob )
             deleted_parent = *iter;
     }
-
     //FIND THE deleted_parent's SIBILINGS
     for( State * grandpa : deleted_parent->parents ) {
         for( State * sibiling : grandpa->children ) {
@@ -201,6 +240,7 @@ void Organization::delete_parent(int level, int level_id, int update_id)
         for( State * grandpa : deleted_parent->parents )
             grandpa->is_tag = true;
     }
+
     //REMOVE THE PARENTSHIP FROM THE GRANDFATHER
     //ADD THE GRANDFATHERS INTO THE HEAP (THEIR DESCENT WILL BE UPDATED)
     for( State * parent : deleted_states ){
@@ -233,7 +273,7 @@ void Organization::add_parent(int level, int level_id, int update_id)
 {
     State *current = *next(this->all_states[level].begin(), level_id);
     set<State*, CompareProb> * candidates = &this->all_states[level-1];
-    set<State*, CompareProb>::iterator iter = candidates->end();
+    set<State*>::iterator iter = candidates->end();
     State *best_candidate = NULL;
     int id;
     //FIND THE BEST CANDIDATE WHO IS NEITHER PARENT NOR DESCEDANT
@@ -241,8 +281,8 @@ void Organization::add_parent(int level, int level_id, int update_id)
         iter--;
         id = abs( (*iter)->abs_column_id );
         if( (*iter)->children.size() > 0 && !current->reachable_states[id] && current->parents.find(*iter) == current->parents.end() ) {
-            best_candidate = *iter;
-            break;
+            if(best_candidate == NULL || best_candidate->overall_reach_prob < (*iter)->overall_reach_prob)
+                best_candidate = *iter;
         } 
     }
 
@@ -258,52 +298,31 @@ void Organization::add_parent(int level, int level_id, int update_id)
 }
 
 //IMPLEMENTATION CONSIDERING THE PARENTS OF A STATE ARE IN DIFFERENT LEVELS
-//TOPOLOGICAL SORT - APPROACH BASED ON DFS
 void Organization::update_descendants(vector<State*> * ancestors, int update_id)
 {
+    int old_level;
     State *current;
-    vector<State*> path, stack;
-    path.push_back( ancestors->back() );
-    ancestors->pop_back();
-
-    while( !path.empty() ) {
-        //GET THE TOP STATE FROM THE STACK
-        current = path.back();
-        //VERIFY IF THE CURRENT STATE HAS ALREADY BEEN VISITED
-        if( current->update_id == update_id ) {
-            path.pop_back();
-            stack.push_back(current);
-        } else {
-            //ADD ITS CHILDREN TO THE STACK
-            for( State * child : current->children ) {
-                if( child->update_id != update_id )
-                    path.push_back(child);
-            }
-            current->update_id = update_id;
-        }
-        //ADD AN UNVISITED STATE INTO THE PATH WHEN IT IS EMPTY
-        while( path.empty() && !ancestors->empty() ) {
-            current = ancestors->back();
-            ancestors->pop_back();
-            if( current->update_id != update_id ) 
-                path.push_back( current );
-        }
-    }
+    vector<State*> stack;
+    topological_sort(ancestors, &stack, update_id);
     //UPDATE THE STATES ORDERED BY TOPOLOGICAL SORT
     while ( !stack.empty() ) 
     {   
         current = stack.back();
         stack.pop_back();
-        //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
-        this->all_states[current->level].erase(current); //O(log N)
+        old_level = current->level;
         //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
+        current->update_level();
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
+        //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
+        this->all_states[old_level].erase(current); //O(log N)
         //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
         this->all_states[current->level].insert(current); //O(log N)
     }
+
     //REMOVE EMPTY LEVELS FROM all_states
-    while( this->all_states.back().empty() )
+    while( this->all_states.back().empty() ){
         this->all_states.pop_back(); // O(1)
+    }
 }
 
 int Organization::update_reachable_states(State * descendant, State * current)
@@ -370,8 +389,9 @@ void Organization::update_ancestors(State *descendant, int update_id)
             ancestors.push_back(current);
             //ITS PARENTS MUST UPDATE THEIR reachable_states
             for(State * parent : current->parents) {
-                if( parent->update_id != update_id )
+                if( parent->update_id != update_id ) {
                     reach_queue.push(parent);
+                }
             }
         }  
     }
@@ -391,8 +411,9 @@ void Organization::update_ancestors(State *descendant, int update_id)
         }
         if( has_changed ) {
             for(State * parent : current->parents) {
-                if( parent->update_id != update_id )
+                if( parent->update_id != update_id ) {
                     reach_queue.push(parent);
+                }
             }
         }
     }
@@ -544,7 +565,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
                 prev_nn->next = nn->next;
             
             //ADD NN TO THE NN CHAIN
-            // printf("%d\n", nn->id);
             nn->is_NN_of = stack;
             stack = nn;
             if( active_clusters == NULL ) {
