@@ -84,14 +84,6 @@ void Organization::success_probabilities()
 
 void Organization::update_effectiveness()
 {
-
-    cout << this->leaves.size() << " ";
-    cout << this->instance->total_num_columns << endl;
-
-    for(State *state : this->leaves)
-        cout << state->abs_column_id << " ";
-    cout << endl;
-
     State *leaf;
     int table_id;
     float *tables_discover_probs = new float[this->instance->num_tables];
@@ -171,13 +163,6 @@ void Organization::init_all_states()
         if( current->children.empty() )
             this->leaves.push_back(current);
     }
-
-    cout << this->leaves.size() << " ";
-    cout << this->instance->total_num_columns << endl;
-
-    for(State *state : this->leaves)
-        cout << state->abs_column_id << " ";
-    cout << endl;
 }
 
 Organization* Organization::copy()
@@ -289,8 +274,7 @@ void Organization::add_parent(int level, int level_id, int update_id)
         iter--;
         id = abs( (*iter)->abs_column_id );
         if( (*iter)->children.size() > 0 && !current->reachable_states[id] && current->parents.find(*iter) == current->parents.end() ) {
-            if(best_candidate == NULL || best_candidate->overall_reach_prob < (*iter)->overall_reach_prob)
-                best_candidate = *iter;
+            best_candidate = *iter;
         } 
     }
 
@@ -308,7 +292,6 @@ void Organization::add_parent(int level, int level_id, int update_id)
 //IMPLEMENTATION CONSIDERING THE PARENTS OF A STATE ARE IN DIFFERENT LEVELS
 void Organization::update_descendants(vector<State*> * ancestors, int update_id)
 {
-    int old_level;
     State *current;
     vector<State*> stack;
     topological_sort(ancestors, &stack, update_id);
@@ -317,12 +300,11 @@ void Organization::update_descendants(vector<State*> * ancestors, int update_id)
     {   
         current = stack.back();
         stack.pop_back();
-        old_level = current->level;
+        //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
+        this->all_states[current->level].erase(current); //O(log N)
         //COMPUTE ITS REACHABILITY PROBABILITIES AND UPDATE LEVEL OF CURRENT NODE. OBS.: ALL PARENTS ARE ALREADY UPDATED
         current->update_level();
         current->update_reach_probs(this->gamma, this->instance->total_num_columns);
-        //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
-        this->all_states[old_level].erase(current); //O(log N)
         //UPDATING all_states WHEN current CHANGES ITS LEVEL OR ITS REACHABILITY, THIS ENSURES THE ORDER INTO BINARY TREE
         this->all_states[current->level].insert(current); //O(log N)
     }

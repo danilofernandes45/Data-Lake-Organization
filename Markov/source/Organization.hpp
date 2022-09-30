@@ -5,7 +5,7 @@
 #include "State.hpp"
 #include <algorithm>
 
-#define DEBUG 1
+#define DEBUG 0
 
 class CompareProb
 {

@@ -120,6 +120,8 @@ Organization* modify_organization(Organization *org, int level, int level_id, in
     #if DEBUG
     cout << "ORIGINAL: " << org->effectiveness << "\n\n";
     print_organization(org);
+    compare_orgs(org, new_org_add);
+    compare_orgs(org, new_org_del);
     #endif
 
     new_org_add->add_parent(level, level_id, update_id);
@@ -158,12 +160,17 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
         increse_perc = ( new_org->effectiveness - org->effectiveness ) / org->effectiveness;
 
         if( increse_perc >= 0 ) {
-            if( increse_perc  < eps )
+            if( increse_perc < eps )
                 count++;
             else
                 count = 0;
             //UPDATE ORGANIZATION
             org = new_org->copy();
+            #if DEBUG
+            print_organization(new_org);
+            print_organization(org);
+            compare_orgs(new_org, org);
+            #endif
             level = 2;
             level_id = 0;
             update_id = update_id + 2; 
@@ -173,6 +180,11 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
             if(  distribution(generator) < prob_accept )
             {
                 org = new_org->copy();
+                #if DEBUG
+                print_organization(new_org);
+                print_organization(org);
+                compare_orgs(new_org, org);
+                #endif
                 level = 2;
                 level_id = 0;
                 update_id = update_id + 2;
