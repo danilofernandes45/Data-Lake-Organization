@@ -84,6 +84,14 @@ void Organization::success_probabilities()
 
 void Organization::update_effectiveness()
 {
+
+    cout << this->leaves.size() << " ";
+    cout << this->instance->total_num_columns << endl;
+
+    for(State *state : this->leaves)
+        cout << state->abs_column_id << " ";
+    cout << endl;
+
     State *leaf;
     int table_id;
     float *tables_discover_probs = new float[this->instance->num_tables];

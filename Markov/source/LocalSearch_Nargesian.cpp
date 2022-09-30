@@ -29,18 +29,87 @@ void print_organization(Organization *org)
     }
     cout << "\n";
 
+    // for (int i = 0; i < org->all_states.size(); i++)
+    // {
+    //     for (State * state : org->all_states[i])
+    //     {
+    //         cout << "~ " << state->abs_column_id << " ~" << endl;
+    //         for(int p = 0; p < org->instance->total_num_columns; p++)
+    //             cout << state->reach_probs[p] << " ";
+    //         cout << "\n" << state->overall_reach_prob << endl;
+    //     }
+        
+    // }
+    // cout << "\n";
+}
+
+void compare_orgs(Organization *org, Organization *new_org)
+{
+
+    set<State*, CompareID>::iterator iter_1, iter_2;
+    set<State*, CompareLevel>::iterator state_1, state_2;
+
+    assert( org->all_states.size() == new_org->all_states.size() );
+
     for (int i = 0; i < org->all_states.size(); i++)
     {
-        for (State * state : org->all_states[i])
+        assert(org->all_states[i].size() == new_org->all_states[i].size());
+
+        iter_1 = org->all_states[i].begin();
+        iter_2 = new_org->all_states[i].begin();
+
+        for(int j = 0; j < org->all_states[i].size(); j++)
         {
-            cout << "~ " << state->abs_column_id << " ~" << endl;
-            for(int p = 0; p < org->instance->total_num_columns; p++)
-                cout << state->reach_probs[p] << " ";
-            cout << "\n" << state->overall_reach_prob << endl;
+            assert( (*iter_1)->abs_column_id == (*iter_2)->abs_column_id );
+            assert( (*iter_1)->parents.size() == (*iter_2)->parents.size() );
+            assert( (*iter_1)->children.size() == (*iter_2)->children.size() );
+
+            // cout << "Parents" << endl;
+            // state_1 = (*iter_1)->parents.begin();
+            // state_2 = (*iter_2)->parents.begin();
+            // for (int s = 0; s < (*iter_1)->parents.size(); s++)
+            // {
+            //     cout << (*state_1)->level << " " << (*state_1)->abs_column_id << " " << (*state_2)->level << " " << (*state_2)->abs_column_id << endl;
+            //     state_1++;
+            //     state_2++;
+            // }
+            // cout << endl;
+
+            state_1 = (*iter_1)->parents.begin();
+            state_2 = (*iter_2)->parents.begin();
+            for (int s = 0; s < (*iter_1)->parents.size(); s++)
+            {
+                assert( (*state_1)->abs_column_id == (*state_2)->abs_column_id );
+                state_1++;
+                state_2++;
+            }
+
+            // cout << "Children" << endl;
+            // state_1 = (*iter_1)->children.begin();
+            // state_2 = (*iter_2)->children.begin();
+            // for (int s = 0; s < (*iter_1)->children.size(); s++)
+            // {
+            //     cout << (*state_1)->level << " " << (*state_1)->abs_column_id << " " << (*state_2)->level << " " << (*state_2)->abs_column_id << endl;
+            //     state_1++;
+            //     state_2++;
+            // }
+
+            // cout << endl;
+
+
+            state_1 = (*iter_1)->children.begin();
+            state_2 = (*iter_2)->children.begin();
+            for (int s = 0; s < (*iter_1)->children.size(); s++)
+            {
+                assert( (*state_1)->abs_column_id == (*state_2)->abs_column_id );
+                state_1++;
+                state_2++;
+            }
+            
+            iter_1++;
+            iter_2++;
         }
-        
     }
-    cout << "\n";
 }
 
 Organization* modify_organization(Organization *org, int level, int level_id, int update_id)
