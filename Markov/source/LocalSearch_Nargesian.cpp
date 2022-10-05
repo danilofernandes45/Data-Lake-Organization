@@ -205,9 +205,9 @@ Organization* local_search(Organization *org, int plateau_iters, float eps)
 int main()
 {
     Instance * instance = Instance::read_instance();
+    instance->num_tags = 0;
     float gamma = 1.0;
-    // int K_max = 10;
-    int K_max = 1;
+    int K_max = 10;
 
     Organization *org, *new_org, *best_org = NULL;
 
@@ -227,7 +227,7 @@ int main()
     for (int i = 0; i < K_max; i++)
     {
         // new_org = local_search(org, 40, 0.05);
-        new_org = local_search(org, 5, 0.05);
+        new_org = local_search(org, 40, 0.05);
         if( best_org == NULL || new_org->effectiveness > best_org->effectiveness )
             best_org = new_org;
     }
@@ -236,7 +236,7 @@ int main()
 
     cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(end, start) << "\n";
 
-    // best_org->success_probabilities();
+    best_org->success_probabilities();
 
 
     return 0;

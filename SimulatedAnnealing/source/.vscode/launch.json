@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": ["<", "${workspaceFolder}/../../Data/Metadatasets/Socrata/topic_vectors-500-1.txt"],
+            "args": ["<", "${workspaceFolder}/../../Data/Metadatasets/Socrata/100/topic_vectors-100-1.txt"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

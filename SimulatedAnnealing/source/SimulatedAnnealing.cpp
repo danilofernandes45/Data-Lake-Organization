@@ -132,7 +132,7 @@ void perturbation(Organization *org, int update_id)
     x = distribution(generator) * H_n;
     for(double i = 2; i < org->all_states.size(); i++) {
         sum = sum + (1 / i);
-        if( x < sum ){
+        if( x <= sum ){
             level = i;
             break;
         }
@@ -148,13 +148,13 @@ void perturbation(Organization *org, int update_id)
     x = distribution(generator) * H_n;
     for(State * state : org->all_states[level]) {
         sum = sum + ( 1 / state->overall_reach_prob );
-        if( x < sum ){
+        if( x <= sum ){
             level_id = i;
             break;
         }
         i++;
     }
-    
+
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     srand(seed);
     if( rand() % 2 == 0 )
@@ -170,6 +170,7 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
     Organization *new_org = org->copy();
     // compare_orgs(org, new_org);
     float T = org->effectiveness;
+    // float T_min = pow(alpha, 10000);
     float T_min = pow(alpha, 10000);
     float delta;
     //GENERATOR OF RANDOM NUMBERS
@@ -223,6 +224,7 @@ Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, i
 int main()
 {
     Instance * instance = Instance::read_instance();
+    instance->num_tags = 0;
     float gamma = 1.0;
     Organization *org;
 
@@ -245,7 +247,7 @@ int main()
     // org = simulated_annealing(org, 30, 0.001, 100);
     // org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
 
-    org = multistart_sa(instance, gamma, 10, 10, 0.001, 10);
+    org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
 
     time(&end);
 

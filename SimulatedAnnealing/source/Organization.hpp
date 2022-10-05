@@ -30,6 +30,7 @@ class Organization
         void success_probabilities();
         Organization* copy();
         void delete_parent(int level, int level_id, int update_id);
+        void delete_level(int level, int update_id);
         void add_parent(int level, int level_id, int update_id);
         void update_ancestors(State *descendant, int update_id);
         void update_descendants(vector<State*> * ancestors, int update_id);

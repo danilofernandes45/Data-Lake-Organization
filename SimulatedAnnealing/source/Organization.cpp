@@ -267,20 +267,72 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     this->update_effectiveness();
 }
 
+void Organization::delete_level(int level, int update_id) 
+{
+    vector<State*> grandpas;
+    //IF deleted_parent HAS A TAG, THEN ITS GRANDPAS WILL HAVE IT TOO
+    for( State * deleted_parent : this->all_states[level] ) {
+        if( deleted_parent->children.size() > 0 ) {
+            for( State * grandpa : deleted_parent->parents )
+                grandpa->is_tag = deleted_parent->is_tag;
+        }
+    }
+
+    //REMOVE THE PARENTSHIP FROM THE GRANDFATHER
+    //ADD THE GRANDFATHERS INTO THE HEAP (THEIR DESCENT WILL BE UPDATED)
+    for( State * parent : this->all_states[level] ){
+        if( parent->children.size() > 0 ) {
+            for( State * grandpa : parent->parents ) {
+                grandpa->children.erase(parent); // O(log N)
+                grandpas.push_back(grandpa); // O(1)
+            }
+        }
+    }
+    //TRANSFER THE PARENTSHIP TO THE GRANDFATHER
+    for( State * parent : this->all_states[level] ){
+        if( parent->children.size() > 0 ){
+            for( State * child : parent->children ){
+                child->parents.erase(parent); // O(log N)
+                for( State * grandpa : parent->parents ){
+                    child->parents.insert(grandpa); // O(log N)
+                    grandpa->children.insert(child); // O(log N)
+                }
+            }
+        }
+    }
+
+    //REMOVE deleted_parents FROM THE ORGANIZATION
+    for( State * parent : this->all_states[level] ) {
+        if( parent->children.size() > 0 ) 
+            this->all_states[parent->level].erase(parent); // O(log N)
+    }
+    //UPDATE DESCEDANTS
+    this->update_descendants(&grandpas, update_id);
+    this->update_effectiveness();
+}
+
 void Organization::add_parent(int level, int level_id, int update_id)
 {
     State *current = *next(this->all_states[level].begin(), level_id);
     set<State*, CompareID> * candidates = &this->all_states[level-1];
-    set<State*>::iterator iter = candidates->end();
+    // set<State*>::iterator iter = candidates->end();
     State *best_candidate = NULL;
     int id;
     //FIND THE BEST CANDIDATE WHO IS NEITHER PARENT NOR DESCEDANT
-    for( int i = candidates->size()-1; i >= 0; i--) {
-        iter--;
-        id = abs( (*iter)->abs_column_id );
-        if( (*iter)->children.size() > 0 && !current->reachable_states[id] && current->parents.find(*iter) == current->parents.end() ) {
-            if(best_candidate == NULL || best_candidate->overall_reach_prob < (*iter)->overall_reach_prob)
-                best_candidate = *iter;
+    // for( int i = candidates->size()-1; i >= 0; i--) {
+    //     iter--;
+    //     id = abs( (*iter)->abs_column_id );
+    //     if( (*iter)->children.size() > 0 && !current->reachable_states[id] && current->parents.find(*iter) == current->parents.end() ) {
+    //         if(best_candidate == NULL || best_candidate->overall_reach_prob < (*iter)->overall_reach_prob)
+    //             best_candidate = *iter;
+    //     } 
+    // }
+
+    for( State * state : *candidates) {
+        id = abs( state->abs_column_id );
+        if( state->children.size() > 0 && !current->reachable_states[id] && current->parents.find(state) == current->parents.end() ) {
+            if(best_candidate == NULL || best_candidate->overall_reach_prob < state->overall_reach_prob)
+                best_candidate = state;
         } 
     }
 
@@ -515,6 +567,11 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     int state_id = - inst->total_num_columns - inst->num_tags;
     float diff_dists;
 
+    //GENERATOR OF RANDOM NUMBERS
+    random_device rand_dev;
+    mt19937 generator(rand_dev());
+    uniform_real_distribution<double> distribution(0.0, 1.0);
+
     //WHILE THERE ARE CLUSTERS TO MERGE 
     while(stack != NULL)
     {
@@ -537,9 +594,19 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
         }
         //CHECK IF A PAIR OF RNN WERE FOUND
         diff_dists = 1.0;
+
+        //WITHOUT STOCASTIC FACTOR
+        // if( stack->is_NN_of != NULL ){
+        //     diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
+        // }
+        //WITH STOCASTIC FACTOR
         if( stack->is_NN_of != NULL ){
-            diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
+            if( 2 * distribution(generator) < ( 2 - dist_matrix[stack->id][stack->is_NN_of->id] ) )
+                diff_dists = -1.0;
+            else
+                diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
         }
+
         if( diff_dists < 0 || ( diff_dists == 0 && stack->is_NN_of->id < nn->id ) )
         {
             // printf("%d\n", stack->is_NN_of->id);
