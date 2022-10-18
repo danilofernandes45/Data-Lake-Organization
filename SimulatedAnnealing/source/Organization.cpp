@@ -177,6 +177,7 @@ Organization* Organization::copy()
     copy->gamma = this->gamma;
     copy->effectiveness = this->effectiveness;
     copy->max_num_states = this->max_num_states;
+    copy->t_start = this->t_start;
 
     set<State*>::iterator iter, iter_copy;
     State *copied_state;
@@ -270,6 +271,8 @@ void Organization::delete_parent(int level, int level_id, int update_id)
 void Organization::delete_level(int level, int update_id) 
 {
     vector<State*> grandpas;
+    set<State*, CompareID> deleted_level = this->all_states[level];
+
     //IF deleted_parent HAS A TAG, THEN ITS GRANDPAS WILL HAVE IT TOO
     for( State * deleted_parent : this->all_states[level] ) {
         if( deleted_parent->children.size() > 0 ) {
@@ -300,15 +303,17 @@ void Organization::delete_level(int level, int update_id)
             }
         }
     }
-
     //REMOVE deleted_parents FROM THE ORGANIZATION
-    for( State * parent : this->all_states[level] ) {
-        if( parent->children.size() > 0 ) 
+    for( State * parent : deleted_level ) {
+        if( parent->children.size() > 0 ) {
             this->all_states[parent->level].erase(parent); // O(log N)
+        }
     }
     //UPDATE DESCEDANTS
-    this->update_descendants(&grandpas, update_id);
-    this->update_effectiveness();
+    if( !grandpas.empty() ) {
+        this->update_descendants(&grandpas, update_id);
+        this->update_effectiveness();
+    }
 }
 
 void Organization::add_parent(int level, int level_id, int update_id)
@@ -596,16 +601,16 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
         diff_dists = 1.0;
 
         //WITHOUT STOCASTIC FACTOR
-        // if( stack->is_NN_of != NULL ){
-        //     diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
-        // }
-        //WITH STOCASTIC FACTOR
         if( stack->is_NN_of != NULL ){
-            if( 2 * distribution(generator) < ( 2 - dist_matrix[stack->id][stack->is_NN_of->id] ) )
-                diff_dists = -1.0;
-            else
-                diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
+            diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
         }
+        //WITH STOCASTIC FACTOR
+        // if( stack->is_NN_of != NULL ){
+        //     if( distribution(generator) < pow( 1 - 0.5 * dist_matrix[stack->id][stack->is_NN_of->id], 10 ) )
+        //         diff_dists = -1.0;
+        //     else
+        //         diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
+        // }
 
         if( diff_dists < 0 || ( diff_dists == 0 && stack->is_NN_of->id < nn->id ) )
         {

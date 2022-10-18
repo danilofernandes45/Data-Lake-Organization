@@ -4,6 +4,7 @@
 #include "Cluster.hpp"
 #include "State.hpp"
 #include <algorithm>
+#include <time.h>
 
 #define DEBUG 0
 
@@ -24,6 +25,8 @@ class Organization
         vector<State*> leaves;
         float effectiveness;
         int max_num_states;
+        time_t t_start; // TIME WHEN CREATE THE ORGANIZATION
+        time_t t_end; // TIME WHEN FINISH THE OPTIMIZATION
         
         void init_all_states();
         void update_effectiveness();

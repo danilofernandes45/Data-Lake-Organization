@@ -1,7 +1,7 @@
 # My third makefile
 
 # Name of the project
-PROJ_NAME=local_search
+PROJ_NAME=sa
 
 # .c files
 C_SOURCE=$(wildcard ./source/*.cpp)

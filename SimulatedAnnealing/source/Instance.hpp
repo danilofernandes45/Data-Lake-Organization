@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 #include <bits/stdc++.h>
+#include <iostream>
+#include <fstream>
+#include <string>
 using namespace std;
 
 class Table
@@ -27,6 +30,7 @@ class Instance
         Table **tables; // TABLES FROM DATA LAKE
         int **map; // MAP ABSOLUTE (IN DL) IN RELATIVE (IN ITS TABLE) COLUMN ID
         static Instance* read_instance();
+        static Instance* read_instance(string filename);
 };
 
 #endif

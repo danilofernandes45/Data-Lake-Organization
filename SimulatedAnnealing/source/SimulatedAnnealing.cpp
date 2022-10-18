@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <bits/stdc++.h>
 #include <vector>
+#include <string>
 #include <iostream>     // std::cout
 #include <random>       // std::default_random_engine
 #include <time.h>
+#include <map>
+
 using namespace std;
 
 //PROJECT FILES
@@ -160,10 +163,11 @@ void perturbation(Organization *org, int update_id)
     if( rand() % 2 == 0 )
         org->add_parent(level, level_id, update_id);
     else
+        // org->delete_level(level, update_id);
         org->delete_parent(level, level_id, update_id);
 }
 
-Organization* simulated_annealing(Organization *org, int max_iter, float alpha, int K_max)
+Organization* simulated_annealing(Organization *org, int max_iter, float alpha, int K_max, double timeout)
 {
     int update_id = 1;
     Organization *best_org = org;
@@ -171,7 +175,6 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
     // compare_orgs(org, new_org);
     float T = org->effectiveness;
     // float T_min = pow(alpha, 10000);
-    float T_min = pow(alpha, 10000);
     float delta;
     //GENERATOR OF RANDOM NUMBERS
     random_device rand_dev;
@@ -180,7 +183,7 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
 
     int count = 0;
 
-    while( T > T_min && count < K_max ) {
+    while( T > 0 && count < K_max ) {
         for(int i = 0; i < max_iter; i++) {
             perturbation(new_org, update_id);
             count++;
@@ -201,6 +204,10 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
 
             if( new_org->all_states.size() == 2 )
                 new_org = best_org->copy();
+            
+            time(&best_org->t_end);
+            if( difftime(best_org->t_end, best_org->t_start) >= timeout )
+                return best_org;
 
         }
         T = alpha * T;
@@ -208,24 +215,55 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
     return best_org;
 }
 
-Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, int max_iter, float alpha, int K_max) {
-    Organization *best_org = NULL;
-    Organization *new_org;
-    for (int i = 0; i < num_restarts; i++)
+Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, int max_iter, float alpha, int K_max, double timeout) {
+    
+    time_t t_start;
+    time(&t_start);
+
+    Organization *best_org, *new_org;
+    Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
+    org->t_start = t_start;
+    time(&org->t_end);
+
+    best_org = org;
+
+    // int i = 0;
+    // while ( i < num_restarts && difftime(best_org->t_end, t_start) < timeout )
+    while ( difftime(best_org->t_end, t_start) < timeout )
     {
-        new_org = Organization::generate_organization_by_clustering(instance, gamma);
-        new_org = simulated_annealing(new_org, max_iter, alpha, K_max);
-        if( best_org == NULL || new_org->effectiveness > best_org->effectiveness )
+        new_org = simulated_annealing(org, max_iter, alpha, K_max, timeout);
+        if( new_org->effectiveness > best_org->effectiveness )
             best_org = new_org;
+        else 
+            time(&best_org->t_end);
+        // i++;
     }
     return best_org;    
 }
 
-int main()
-{
-    Instance * instance = Instance::read_instance();
+map<string, string> parseCommandline(int argc, char* argv[]) {
+    map<string, string> args;
+    for(int i=1; i < argc; i = i + 2)
+        args.insert(pair<string, string>(argv[i], argv[i+1]));
+    return args;
+}
+
+int main(int argc, char* argv[]) {
+
+    // Parses command line arguments.
+    auto args = parseCommandline(argc, argv);
+
+    Instance * instance = Instance::read_instance(args["-i"]);
     instance->num_tags = 0;
-    float gamma = 1.0;
+
+    // float gamma = 25.0;
+    float gamma = stof(args["--gamma"]);
+    double timeout = stod(args["--time"]);
+    // int num_restarts = stoi(args["--Kr"]);
+    int max_iters = stoi(args["--Ki"]);
+    int max_failures = stoi(args["--Kf"]);
+    float alpha = stof(args["--alpha"]);
+
     Organization *org;
 
     //PERFORMANCE EVALUATION
@@ -233,27 +271,24 @@ int main()
 
     time(&start);
 
-    // org = Organization::generate_basic_organization(instance, gamma);
-    // cout << org->effectiveness << " " << org->all_states.size() << endl;
+    // org = multistart_sa(instance, gamma, 10, 40, 0.001, 20); //100
+    // org = multistart_sa(instance, gamma, 5, 40, 0.001, 15); // 300
+    // org = multistart_sa(instance, gamma, 1, 40, 0.001, 15); // 500
+    org = multistart_sa(instance, gamma, -1, max_iters, alpha, max_failures, timeout); // 500
+
     // org = Organization::generate_organization_by_clustering(instance, gamma);
-    // cout << org->effectiveness << " " << org->all_states.size() << endl;
-    // org = Organization::generate_organization_by_heuristic(instance, gamma);
-    // cout << org->effectiveness << " " << org->all_states.size() << endl;
-    // org = grasp(instance, gamma, 10);
+    // org = simulated_annealing(org, 40, 0.001, 15); //500
+    // org = simulated_annealing(org, 20, 0.001, 15); // 1000
+    
+    // org = simulated_annealing(org, max_iters, alpha, max_failures);
 
-    // org = local_search(org, 1).first;
-    // org = iterated_local_search(instance, gamma, 5);
-
-    // org = simulated_annealing(org, 30, 0.001, 100);
-    // org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
-
-    org = multistart_sa(instance, gamma, 10, 20, 0.001, 20);
 
     time(&end);
 
-    cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(end, start) << "\n";
+    cout << -org->effectiveness << endl; //FOR IRACE CALIBRATION
+    // cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
 
-    org->success_probabilities();
+    // org->success_probabilities();
 
     return 0;
 }
