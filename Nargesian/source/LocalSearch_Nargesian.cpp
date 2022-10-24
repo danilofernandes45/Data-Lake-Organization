@@ -216,7 +216,7 @@ Organization* multistart_ls(Instance *instance, float gamma, int num_restarts, i
 
     best_org = org;
 
-    // int i = 0;
+    int i = 0;
     // while ( i < num_restarts && difftime(best_org->t_end, t_start) < timeout )
     while ( difftime(best_org->t_end, t_start) < timeout )
     {
@@ -225,8 +225,9 @@ Organization* multistart_ls(Instance *instance, float gamma, int num_restarts, i
             best_org = new_org;
         else 
             time(&best_org->t_end);
-        // i++;
+        i++;
     }
+    cout << i << ", ";
     return best_org;    
 }
 
@@ -268,10 +269,10 @@ int main(int argc, char* argv[]) {
     // best_org = local_search(org, 40, 0.05); //500
     // best_org = local_search(org, 15, 0.05); //500
 
-    // cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(best_org->t_end, best_org->t_start) << "\n";
-    cout << -best_org->effectiveness << endl;
+    cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(best_org->t_end, best_org->t_start) << "\n";
+    // cout << -best_org->effectiveness << endl;
 
-    // best_org->success_probabilities();
+    best_org->success_probabilities();
 
 
     return 0;

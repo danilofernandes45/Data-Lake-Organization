@@ -227,7 +227,7 @@ Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, i
 
     best_org = org;
 
-    // int i = 0;
+    int i = 0;
     // while ( i < num_restarts && difftime(best_org->t_end, t_start) < timeout )
     while ( difftime(best_org->t_end, t_start) < timeout )
     {
@@ -236,8 +236,9 @@ Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, i
             best_org = new_org;
         else 
             time(&best_org->t_end);
-        // i++;
+        i++;
     }
+    cout << i << ", ";
     return best_org;    
 }
 
@@ -285,10 +286,10 @@ int main(int argc, char* argv[]) {
 
     time(&end);
 
-    cout << -org->effectiveness << endl; //FOR IRACE CALIBRATION
-    // cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
+    // cout << -org->effectiveness << endl; //FOR IRACE CALIBRATION
+    cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
 
-    // org->success_probabilities();
+    org->success_probabilities();
 
     return 0;
 }
