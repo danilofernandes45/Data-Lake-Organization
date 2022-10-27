@@ -15,23 +15,23 @@
 #     Copyright (C) 2003 Mauro Birattari
 #------------------------------------------------------------------------------
 # installed at: /home/danilo/R/irace
-# called with: 
+# called with: --parallel 6
 Warning: A default scenario file './scenario.txt' has been found and will be read
 # Read 1 configuration(s) from file '/home/danilo/Documents/TCC/Data-Lake-Organization/SimulatedAnnealing/tuning/configurations.txt'
-# 2022-10-26 09:13:58 -03: Initialization
+# 2022-10-17 19:17:41 -03: Initialization
 # Elitist race
 # Elitist new instances: 1
 # Elitist limit: 2
 # nbIterations: 3
 # minNbSurvival: 3
 # nbParameters: 3
-# seed: 994909690
+# seed: 425733593
 # confidence level: 0.95
 # budget: 250
 # mu: 5
 # deterministic: FALSE
 
-# 2022-10-26 09:13:58 -03: Iteration 1 of 3
+# 2022-10-17 19:17:41 -03: Iteration 1 of 3
 # experimentsUsedSoFar: 0
 # remainingBudget: 250
 # currentBudget: 83
@@ -47,24 +47,24 @@ Warning: A default scenario file './scenario.txt' has been found and will be rea
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
 | |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
-|x|          1|         13|         12|  -0.1367910000|         13|00:22:19|   NA|  NA|    NA|
-|x|          2|         13|         10|  -0.1337645000|         26|00:22:09|-0.14|0.43|1.0493|
-|x|          3|         13|         10|  -0.1304526667|         39|00:22:35|+0.33|0.55|0.7286|
-|x|          4|         13|          3|  -0.1245957500|         52|00:22:07|+0.19|0.39|0.7231|
-|=|          5|         13|          3|  -0.1227492000|         65|00:22:18|+0.16|0.33|0.6992|
-|-|          6|          3|          3|  -0.1208545000|         78|00:22:17|+0.15|0.30|0.4944|
+|x|          1|         13|          4|  -0.1153550000|         13|00:05:24|   NA|  NA|    NA|
+|x|          2|         13|          2|  -0.1194775000|         26|00:05:29|-0.43|0.29|1.1214|
+|x|          3|         13|          4|  -0.1232650000|         39|00:05:06|-0.11|0.26|0.8769|
+|x|          4|         13|          4|  -0.1252397500|         52|00:05:26|+0.02|0.26|0.8128|
+|=|          5|         13|          7|  -0.1225540000|         65|00:05:13|+0.05|0.24|0.8108|
+|=|          6|         13|          7|  -0.1198903333|         78|00:05:17|+0.04|0.20|0.6944|
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
-Best-so-far configuration:           3    mean value:   -0.1208545000
+Best-so-far configuration:           7    mean value:   -0.1198903333
 Description of the best-so-far configuration:
   .ID. Ki Kf  alpha .PARENT.
-3    3 78  4 0.0045       NA
+7    7  5 18 0.0074       NA
 
-# 2022-10-26 11:27:46 -03: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
-   Ki Kf  alpha
-3  78  4 0.0045
-1  20 15 0.0010
-12  4  8 0.0063
-# 2022-10-26 11:27:46 -03: Iteration 2 of 3
+# 2022-10-17 19:49:40 -03: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+  Ki Kf  alpha
+7  5 18 0.0074
+4 95 28 0.0080
+2  1 31 0.0094
+# 2022-10-17 19:49:40 -03: Iteration 2 of 3
 # experimentsUsedSoFar: 78
 # remainingBudget: 172
 # currentBudget: 86
@@ -80,29 +80,30 @@ Description of the best-so-far configuration:
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
 | |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
-|x|          7|         14|         23|  -0.1470170000|         14|00:23:47|   NA|  NA|    NA|
-|x|          6|         14|         19|  -0.1290160000|         25|00:18:47|+0.12|0.56|1.0790|
-|x|          3|         14|          3|  -0.1272186667|         36|00:19:02|+0.20|0.47|0.9846|
-|x|          5|         14|          3|  -0.1242547500|         47|00:18:39|+0.19|0.39|0.9306|
-|=|          2|         14|          3|  -0.1255592000|         58|00:18:37|+0.11|0.29|0.9544|
-|=|          4|         14|          3|  -0.1224901667|         69|00:18:45|+0.10|0.25|0.8891|
-|=|          1|         14|          3|  -0.1245274286|         80|00:18:42|+0.06|0.19|0.9068|
+|x|          7|         14|          7|  -0.1492290000|         14|00:05:10|   NA|  NA|    NA|
+|x|          3|         14|         17|  -0.1399945000|         25|00:03:30|+0.18|0.59|0.9793|
+|x|          1|         14|          4|  -0.1315980000|         36|00:03:28|+0.11|0.41|0.7375|
+|x|          5|         14|          7|  -0.1267602500|         47|00:03:28|+0.15|0.36|0.8078|
+|=|          2|         14|          7|  -0.1261432000|         58|00:03:33|+0.16|0.33|0.8073|
+|-|          6|          7|          7|  -0.1228813333|         69|00:03:43|-0.07|0.11|0.8993|
+|=|          4|          7|          7|  -0.1240815714|         73|00:01:45|-0.05|0.10|0.9066|
+|=|          8|          7|          7|  -0.1231192500|         80|00:03:28|-0.08|0.06|0.9077|
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
-Best-so-far configuration:           3    mean value:   -0.1245274286
+Best-so-far configuration:           7    mean value:   -0.1231192500
 Description of the best-so-far configuration:
   .ID. Ki Kf  alpha .PARENT.
-3    3 78  4 0.0045       NA
+7    7  5 18 0.0074       NA
 
-# 2022-10-26 13:44:09 -03: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+# 2022-10-17 20:17:50 -03: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
    Ki Kf  alpha
-3  78  4 0.0045
-23 26 31 0.0048
-12  4  8 0.0063
-# 2022-10-26 13:44:09 -03: Iteration 3 of 3
+7   5 18 0.0074
+17 15 20 0.0084
+2   1 31 0.0094
+# 2022-10-17 20:17:50 -03: Iteration 3 of 3
 # experimentsUsedSoFar: 158
 # remainingBudget: 92
 # currentBudget: 92
-# nbConfigurations: 14
+# nbConfigurations: 12
 # Markers:
      x No test is performed.
      c Configurations are discarded only due to capping.
@@ -114,41 +115,42 @@ Description of the best-so-far configuration:
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
 | |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
-|x|          8|         14|         29|  -0.1317540000|         14|00:23:42|   NA|  NA|    NA|
-|x|          6|         14|         26|  -0.1141775000|         25|00:18:44|+0.28|0.64|1.0259|
-|x|          4|         14|          3|  -0.1119216667|         36|00:18:36|+0.16|0.44|0.9857|
-|x|          5|         14|          3|  -0.1127820000|         47|00:18:44|+0.21|0.40|0.9179|
-|=|          1|         14|          3|  -0.1175758000|         58|00:18:55|+0.07|0.26|0.9826|
-|=|          7|         14|          3|  -0.1224073333|         69|00:18:47|+0.10|0.25|0.9690|
-|=|          2|         14|          3|  -0.1236030000|         80|00:18:42|+0.11|0.23|0.9754|
-|-|          3|          6|          3|  -0.1236163750|         91|00:18:56|-0.08|0.06|0.9429|
+|x|          9|         12|         29|  -0.1466340000|         12|00:03:29|   NA|  NA|    NA|
+|x|          8|         12|          2|  -0.1315655000|         21|00:03:28|+0.16|0.58|0.9506|
+|x|          6|         12|          2|  -0.1232343333|         30|00:03:33|+0.16|0.44|0.7734|
+|x|          4|         12|          2|  -0.1253127500|         39|00:03:35|+0.07|0.30|0.8001|
+|=|          2|         12|          2|  -0.1249862000|         48|00:03:33|+0.13|0.31|0.8644|
+|=|          3|         12|          2|  -0.1259506667|         57|00:03:43|+0.13|0.27|0.8785|
+|=|          7|         12|          2|  -0.1291942857|         66|00:03:30|+0.08|0.21|0.9166|
+|=|          1|         12|          2|  -0.1274543750|         75|00:03:38|+0.04|0.16|0.9365|
+|=|          5|         12|          2|  -0.1256653333|         84|00:03:25|+0.03|0.14|0.9322|
 +-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
-Best-so-far configuration:           3    mean value:   -0.1236163750
+Best-so-far configuration:           2    mean value:   -0.1256653333
 Description of the best-so-far configuration:
   .ID. Ki Kf  alpha .PARENT.
-3    3 78  4 0.0045       NA
+2    2  1 31 0.0094       NA
 
-# 2022-10-26 16:19:19 -03: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+# 2022-10-17 20:49:52 -03: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
    Ki Kf  alpha
-3  78  4 0.0045
-30 13  9 0.0056
-29  2 17 0.0062
-# 2022-10-26 16:19:20 -03: Stopped because there is not enough budget left to race more than the minimum (3)
+2   1 31 0.0094
+29 20 10 0.0064
+7   5 18 0.0074
+# 2022-10-17 20:49:53 -03: Stopped because there is not enough budget left to race more than the minimum (3)
 # You may either increase the budget or set 'minNbSurvival' to a lower value
 # Iteration: 4
 # nbIterations: 4
-# experimentsUsedSoFar: 249
+# experimentsUsedSoFar: 242
 # timeUsed: 0
-# remainingBudget: 1
-# currentBudget: 1
+# remainingBudget: 8
+# currentBudget: 8
 # number of elites: 3
-# nbConfigurations: 2
+# nbConfigurations: 3
 # Best configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
    Ki Kf  alpha
-3  78  4 0.0045
-30 13  9 0.0056
-29  2 17 0.0062
+2   1 31 0.0094
+29 20 10 0.0064
+7   5 18 0.0074
 # Best configurations as commandlines (first number is the configuration ID; same order as above):
-3   --Ki 78 --Kf 4 --alpha 0.0045
-30  --Ki 13 --Kf 9 --alpha 0.0056
-29  --Ki 2 --Kf 17 --alpha 0.0062
+2   --Ki 1 --Kf 31 --alpha 0.0094
+29  --Ki 20 --Kf 10 --alpha 0.0064
+7   --Ki 5 --Kf 18 --alpha 0.0074
