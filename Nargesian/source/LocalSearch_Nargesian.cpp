@@ -144,7 +144,7 @@ Organization* modify_organization(Organization *org, int level, int level_id, in
     return new_org_del;
 }
 
-Organization* local_search(Organization *org, int plateau_iters, float eps, double timeout)
+Organization* local_search(Organization *org, int plateau_iters, float eps, double timeout, float target)
 {
     Organization *new_org;
     int level = 2, level_id = 0;
@@ -155,7 +155,7 @@ Organization* local_search(Organization *org, int plateau_iters, float eps, doub
     mt19937 generator(rand_dev());
     uniform_real_distribution<float> distribution(0.0, 1.0);
 
-    while (count < plateau_iters && org->all_states.size() >= 3 && difftime(org->t_end, org->t_start) < timeout )
+    while (count < plateau_iters && org->all_states.size() >= 3 && difftime(org->t_end, org->t_start) < timeout && org->effectiveness < target)
     {
         new_org = modify_organization(org, level, level_id, update_id);
         increse_perc = ( new_org->effectiveness - org->effectiveness ) / org->effectiveness;
@@ -204,7 +204,7 @@ Organization* local_search(Organization *org, int plateau_iters, float eps, doub
     return org;
 }
 
-Organization* multistart_ls(Instance *instance, float gamma, int num_restarts, int plateau_iters, float eps, double timeout) {
+Organization* multistart_ls(Instance *instance, float gamma, int num_restarts, int plateau_iters, float eps, double timeout, float target) {
     
     time_t t_start;
     time(&t_start);
@@ -218,16 +218,16 @@ Organization* multistart_ls(Instance *instance, float gamma, int num_restarts, i
 
     int i = 0;
     // while ( i < num_restarts && difftime(best_org->t_end, t_start) < timeout )
-    while ( difftime(best_org->t_end, t_start) < timeout )
+    while ( difftime(best_org->t_end, t_start) < timeout && best_org->effectiveness < target)
     {
-        new_org = local_search(org, plateau_iters, eps, timeout);
+        new_org = local_search(org, plateau_iters, eps, timeout, target);
         if( new_org->effectiveness > best_org->effectiveness )
             best_org = new_org;
         else 
             time(&best_org->t_end);
         i++;
     }
-    cout << i << ", ";
+    // cout << i << ", ";
     return best_org;    
 }
 
@@ -253,10 +253,12 @@ int main(int argc, char* argv[]) {
     int plateau_iters = stoi(args["--Kp"]);
     float eps = stof(args["--eps"]);
 
+    float target = stof(args["--target"]);
+
     // float gamma = 25.0;
     // int K_max = 10;
 
-    Organization *best_org = multistart_ls(instance, gamma, -1, plateau_iters, eps, timeout);
+    Organization *best_org = multistart_ls(instance, gamma, -1, plateau_iters, eps, timeout, target);
 
     // org = Organization::generate_organization_by_clustering(instance, gamma);
     // for (int i = 0; i < K_max; i++)
@@ -269,10 +271,11 @@ int main(int argc, char* argv[]) {
     // best_org = local_search(org, 40, 0.05); //500
     // best_org = local_search(org, 15, 0.05); //500
 
-    cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(best_org->t_end, best_org->t_start) << "\n";
+    cout <<  difftime(best_org->t_end, best_org->t_start) << endl;
+    // cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(best_org->t_end, best_org->t_start) << "\n";
     // cout << -best_org->effectiveness << endl;
 
-    best_org->success_probabilities();
+    // best_org->success_probabilities();
 
 
     return 0;

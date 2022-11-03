@@ -167,7 +167,7 @@ void perturbation(Organization *org, int update_id)
         org->delete_parent(level, level_id, update_id);
 }
 
-Organization* simulated_annealing(Organization *org, int max_iter, float alpha, int K_max, double timeout)
+Organization* simulated_annealing(Organization *org, int max_iter, float alpha, int K_max, double timeout, float target)
 {
     int update_id = 1;
     Organization *best_org = org;
@@ -206,7 +206,7 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
                 new_org = best_org->copy();
             
             time(&best_org->t_end);
-            if( difftime(best_org->t_end, best_org->t_start) >= timeout )
+            if( difftime(best_org->t_end, best_org->t_start) >= timeout || best_org->effectiveness >= target)
                 return best_org;
 
         }
@@ -215,7 +215,7 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
     return best_org;
 }
 
-Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, int max_iter, float alpha, int K_max, double timeout) {
+Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, int max_iter, float alpha, int K_max, double timeout, float target) {
     
     time_t t_start;
     time(&t_start);
@@ -229,16 +229,16 @@ Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, i
 
     int i = 0;
     // while ( i < num_restarts && difftime(best_org->t_end, t_start) < timeout )
-    while ( difftime(best_org->t_end, t_start) < timeout )
+    while ( difftime(best_org->t_end, t_start) < timeout && best_org->effectiveness < target )
     {
-        new_org = simulated_annealing(org, max_iter, alpha, K_max, timeout);
+        new_org = simulated_annealing(org, max_iter, alpha, K_max, timeout, target);
         if( new_org->effectiveness > best_org->effectiveness )
             best_org = new_org;
         else 
             time(&best_org->t_end);
         i++;
     }
-    cout << i << ", ";
+    // cout << i << ", ";
     return best_org;    
 }
 
@@ -265,6 +265,8 @@ int main(int argc, char* argv[]) {
     int max_failures = stoi(args["--Kf"]);
     float alpha = stof(args["--alpha"]);
 
+    float target = stof(args["--target"]);
+
     Organization *org;
 
     //PERFORMANCE EVALUATION
@@ -275,7 +277,8 @@ int main(int argc, char* argv[]) {
     // org = multistart_sa(instance, gamma, 10, 40, 0.001, 20); //100
     // org = multistart_sa(instance, gamma, 5, 40, 0.001, 15); // 300
     // org = multistart_sa(instance, gamma, 1, 40, 0.001, 15); // 500
-    org = multistart_sa(instance, gamma, -1, max_iters, alpha, max_failures, timeout); // 500
+
+    org = multistart_sa(instance, gamma, -1, max_iters, alpha, max_failures, timeout, target); // 500
 
     // org = Organization::generate_organization_by_clustering(instance, gamma);
     // org = simulated_annealing(org, 40, 0.001, 15); //500
@@ -287,9 +290,10 @@ int main(int argc, char* argv[]) {
     time(&end);
 
     // cout << -org->effectiveness << endl; //FOR IRACE CALIBRATION
-    cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
+    cout << difftime(org->t_end, org->t_start) << endl; // FOR TTPLOT
+    // cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
 
-    org->success_probabilities();
+    // org->success_probabilities();
 
     return 0;
 }

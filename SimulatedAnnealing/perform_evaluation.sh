@@ -6,7 +6,7 @@ function eval() {
 	done
 }
 
-for i in $(seq 1 10)
+for i in $(seq 1 5)
 do
-	eval $1 $2 $i > ../Data/Performance/Socrata/SA/$1/perform-$1-$i.csv
+	eval $1 $2 $i > ../Data/Performance/Socrata/SA/$1/perform-$1-$i-2.csv
 done
