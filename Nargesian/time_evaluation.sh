@@ -7,6 +7,6 @@ function eval() {
 }
 
 # eval 100 3 300 0.3615 > data_tttplot-100-3.txt
-# eval 100 5 300 0.4576 > data_tttplot-100-5.txt
-
-eval 300 6 300 0.1633
+eval 100 5 300 0.4576 > data_tttplot-100-5.txt
+eval 300 6 300 0.1633 > data_tttplot-300-6.txt
+eval 500 6 300 0.1089 > data_tttplot-500-6.txt
