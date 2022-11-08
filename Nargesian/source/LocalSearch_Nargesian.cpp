@@ -160,6 +160,8 @@ Organization* local_search(Organization *org, int plateau_iters, float eps, doub
         new_org = modify_organization(org, level, level_id, update_id);
         increse_perc = ( new_org->effectiveness - org->effectiveness ) / org->effectiveness;
 
+        cout << new_org->effectiveness / org->effectiveness << endl;
+
         if( increse_perc >= 0 ) {
             if( increse_perc < eps )
                 count++;
@@ -271,8 +273,8 @@ int main(int argc, char* argv[]) {
     // best_org = local_search(org, 40, 0.05); //500
     // best_org = local_search(org, 15, 0.05); //500
 
-    cout <<  difftime(best_org->t_end, best_org->t_start) << endl;
-    // cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(best_org->t_end, best_org->t_start) << "\n";
+    // cout <<  difftime(best_org->t_end, best_org->t_start) << endl;
+    cout << best_org->effectiveness << ", " << best_org->all_states.size() << ", " << difftime(best_org->t_end, best_org->t_start) << "\n";
     // cout << -best_org->effectiveness << endl;
 
     // best_org->success_probabilities();
