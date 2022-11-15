@@ -255,7 +255,7 @@ int main(int argc, char* argv[]) {
     auto args = parseCommandline(argc, argv);
 
     Instance * instance = Instance::read_instance(args["-i"]);
-    instance->num_tags = 0;
+    // instance->num_tags = 0;
 
     // float gamma = 25.0;
     float gamma = stof(args["--gamma"]);
@@ -269,31 +269,21 @@ int main(int argc, char* argv[]) {
 
     Organization *org;
 
-    //PERFORMANCE EVALUATION
-    time_t start, end;
+    org = Organization::generate_basic_organization(instance, gamma);
+    cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
+    org->success_probabilities();
+    cout << '\n';
 
-    time(&start);
+    instance->num_tags = 0;
+    org = Organization::generate_basic_organization(instance, gamma);
 
-    // org = multistart_sa(instance, gamma, 10, 40, 0.001, 20); //100
-    // org = multistart_sa(instance, gamma, 5, 40, 0.001, 15); // 300
-    // org = multistart_sa(instance, gamma, 1, 40, 0.001, 15); // 500
-
-    org = multistart_sa(instance, gamma, -1, max_iters, alpha, max_failures, timeout, target); // 500
-
-    // org = Organization::generate_organization_by_clustering(instance, gamma);
-    // org = simulated_annealing(org, 40, 0.001, 15); //500
-    // org = simulated_annealing(org, 20, 0.001, 15); // 1000
-    
-    // org = simulated_annealing(org, max_iters, alpha, max_failures);
-
-
-    time(&end);
+    // org = multistart_sa(instance, gamma, -1, max_iters, alpha, max_failures, timeout, target); // 500
 
     // cout << -org->effectiveness << endl; //FOR IRACE CALIBRATION
-    cout << difftime(org->t_end, org->t_start) << endl; // FOR TTPLOT
-    // cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
-
-    // org->success_probabilities();
+    // cout << difftime(org->t_end, org->t_start) << endl; // FOR TTPLOT
+    cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
+    
+    org->success_probabilities();
 
     return 0;
 }
