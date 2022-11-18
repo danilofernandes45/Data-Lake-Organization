@@ -25,8 +25,11 @@ def plotECDF(data1, data2):
     probs = probs.reset_index(drop = True)
     probs.columns = ['x', 'y', 'approach']
 
-    g = sns.lineplot(data=probs, x = 'x', y = 'y', hue = 'approach', legend = False)
-    plt.legend(title=None, loc='bottom right', labels=['Nargesian', 'SA'])
+    plt.plot(ecdf[0], ecdf[1], 'g--')
+    plt.plot(ecdf[0], ecdf[1]-0.1, 'r-')
+    # sns.color_palette(["green", "red"])
+    # g = sns.lineplot(data=probs, x = 'x', y = 'y', hue = 'approach', legend = False)
+    plt.legend(title=None, loc='lower right', labels=['Nargesian', 'SA'])
     plt.show()
 
 
