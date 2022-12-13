@@ -69,6 +69,13 @@ print(best_mean_diff)
 print("Best IDs")
 print(best_id)
 
+best_id, best_mean_diff = find_best_plot(500)
+
+print("Best mean diffs")
+print(best_mean_diff)
+print("Best IDs")
+print(best_id)
+
 # data = pd.read_csv('../Data/Performance/Socrata/SuccessProbs/success-100-7.csv', sep = '|')
 # plotSuccessProbs(data, 100)
 
