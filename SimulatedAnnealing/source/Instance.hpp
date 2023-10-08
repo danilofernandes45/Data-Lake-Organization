@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include "utils.hpp"
 using namespace std;
 
 class Table
@@ -29,6 +30,8 @@ class Instance
         int embedding_dim; // WORD VECTOR EMBEDDING DIMENSION
         Table **tables; // TABLES FROM DATA LAKE
         int **map; // MAP ABSOLUTE (IN DL) IN RELATIVE (IN ITS TABLE) COLUMN ID
+        ~Instance();
+        void print_stats();
         static Instance* read_instance();
         static Instance* read_instance(string filename);
 };

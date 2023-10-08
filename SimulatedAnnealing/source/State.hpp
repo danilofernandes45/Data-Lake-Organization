@@ -35,6 +35,7 @@ class State
         // int sample_size;  // NUMBER OF VALUES (WORD VECTORS) UNDER ITS DOMAIN
         int level;        // THE SHORTEST PATH LENGTH FROM THE ROOT
         float *reach_probs; // REACHABILITY PROBABILITIES GIVEN EACH INTERESTING ATTRIBUTE
+        float *sum_children_probs; // CHILDREN PROBABILITIES SUM GIVEN EACH INTERESTING ATTRIBUTE
         float overall_reach_prob; // OVERALL REACHABILITY PROBABILITY OF THE STATE
         set<State*, CompareLevel> parents;
         set<State*, CompareID> children;
@@ -45,6 +46,7 @@ class State
         int update_id; //ID OF LAST reach_probs UPDATE. IT'S USED INTO TOPOLOGICAL SORT
         bool is_tag; //IF THE STATE REPRESENTS A TAG
 
+        ~State();
         void update_level();
         void update_reach_probs(float gamma, int total_num_columns);
         void compute_similarities(Instance *inst);

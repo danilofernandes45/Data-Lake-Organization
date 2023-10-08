@@ -12,6 +12,14 @@
 //     return state_1->abs_column_id < state_2->abs_column_id; 
 // }
 
+Organization::~Organization() {
+    for(auto states_level : this->all_states) {
+        for(State * state : states_level) {
+            delete state;
+        }
+    }
+}
+
 //TOPOLOGICAL SORT - APPROACH BASED ON DFS
 void topological_sort(vector<State*> * ancestors, vector<State*> * stack, int update_id)
 {
@@ -57,12 +65,12 @@ void Organization::success_probabilities()
     for (int i = 0; i < this->instance->num_tables; i++)
         tables_success_probs.push_back(1.0);
 
-    for (int i = 0; i < this->leaves.size(); i++)
+    for (unsigned i = 0; i < this->leaves.size(); i++)
     {   
         leaf = this->leaves[i];
         column_success = 1;
 
-        for(int j = 0; j < this->leaves.size(); j++)
+        for(unsigned j = 0; j < this->leaves.size(); j++)
         {
             if(leaf->similarities[j] >= 0.9) {
                 sim_leaf = this->leaves[j];
@@ -107,7 +115,7 @@ void Organization::update_effectiveness()
     cout << "\nColumns Discover Probs: ";
     #endif
 
-    for (int i = 0; i < this->leaves.size(); i++)
+    for (unsigned i = 0; i < this->leaves.size(); i++)
     {   
         leaf = this->leaves[i];
         table_id = this->instance->map[leaf->abs_column_id][0];
@@ -146,7 +154,7 @@ void Organization::init_all_states()
     this->root->reach_probs = new float[this->instance->total_num_columns];
     for (int i = 0; i < this->instance->total_num_columns; i++)
         this->root->reach_probs[i] = 1.0;
-
+        
     vector<State*> ancestors;
     ancestors.push_back(this->root);
     vector<State*> stack;
@@ -181,7 +189,7 @@ Organization* Organization::copy()
 
     set<State*>::iterator iter, iter_copy;
     State *copied_state;
-    for(int i = 0; i < this->all_states.size(); i++)
+    for(unsigned i = 0; i < this->all_states.size(); i++)
     {
         set<State*, CompareID> states;
         for (State * state : this->all_states[i] ){
@@ -193,10 +201,10 @@ Organization* Organization::copy()
         copy->all_states.push_back(states);
     }
     //ADD PARENT RELATIONSHIP
-    for(int i = 1; i < this->all_states.size(); i++) {
+    for(unsigned i = 1; i < this->all_states.size(); i++) {
         iter = this->all_states[i].begin();
         iter_copy = copy->all_states[i].begin();
-        for(int j = 0; j < this->all_states[i].size(); j++) {
+        for(unsigned j = 0; j < this->all_states[i].size(); j++) {
             for(State * parent : (*iter)->parents ) {
                 for(State * state : copy->all_states[parent->level] ) {
                     if( parent->abs_column_id == state->abs_column_id ) {
@@ -213,6 +221,40 @@ Organization* Organization::copy()
     copy->root = *(copy->all_states[0].begin());
 
     return copy; 
+}
+
+double Organization::delete_early_eval(int level, int level_id) 
+{
+    set<State*> deleted_states; // Binary tree
+    set<State*> grandpas;
+    State * current = *next(this->all_states[level].begin(), level_id); //GET ELEMENT AT POSITION level_id
+    State * deleted_parent = *(current->parents.begin());
+    set<State*>::iterator iter;
+    double delta = 0.0;
+    //FIND THE LEAST REACHABLE PARENT
+    for( iter = next(current->parents.begin()); iter != current->parents.end(); iter++){
+        if( (*iter)->overall_reach_prob < deleted_parent->overall_reach_prob )
+            deleted_parent = *iter;
+    }
+    //FIND THE deleted_parent's SIBILINGS
+    for( State * grandpa : deleted_parent->parents ) {
+        for( State * sibiling : grandpa->children ) {
+            if( sibiling == deleted_parent || !sibiling->is_tag && sibiling->children.size() > 0 )
+                    deleted_states.insert(sibiling); // O(log N)
+        }
+    }
+    //ADD THE GRANDFATHERS INTO THE HEAP
+    for( State * parent : deleted_states ){
+        for( State * grandpa : parent->parents )
+            grandpas.insert(grandpa); // O(log N)
+    }
+    for(State *s : grandpas)
+        delta += s->overall_reach_prob;
+    
+    for(State *s : deleted_states)
+        delta -= s->overall_reach_prob;
+    
+    return delta;
 }
 
 void Organization::delete_parent(int level, int level_id, int update_id) 
@@ -260,8 +302,10 @@ void Organization::delete_parent(int level, int level_id, int update_id)
     }
 
     //REMOVE deleted_parents FROM THE ORGANIZATION
-    for( State * parent : deleted_states )
+    for( State * parent : deleted_states ) {
         this->all_states[parent->level].erase(parent); // O(log N)
+        delete parent;
+    }
 
     //UPDATE DESCEDANTS
     this->update_descendants(&grandpas, update_id);
@@ -307,6 +351,7 @@ void Organization::delete_level(int level, int update_id)
     for( State * parent : deleted_level ) {
         if( parent->children.size() > 0 ) {
             this->all_states[parent->level].erase(parent); // O(log N)
+            delete parent;
         }
     }
     //UPDATE DESCEDANTS
@@ -521,13 +566,13 @@ Organization* Organization::generate_basic_organization(Instance * inst, float g
                 State::add_parenthood(org->root, state, org->instance->embedding_dim);
             } else {
                 //IF THE TAGS ARE RELATE TO THE TABLE
-                for (int k = 0; k < inst->tables[i]->tags_table.size(); k++)
+                for (unsigned k = 0; k < inst->tables[i]->tags_table.size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_table[k];
                     State::add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
                 //IF THE TAGS ARE RELATED TO THE COLUMNS
-                for (int k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
+                for (unsigned k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_cols[j][k];
                     State::add_parenthood(tags[tag_id], state, inst->embedding_dim);
@@ -560,10 +605,9 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     Cluster* active_clusters = Cluster::init_clusters(inst); // CHAINED LIST OF CLUSTERS AVAILABLE TO BE ADDED TO NN CHAIN
     int num_clusters = inst->num_tags > 0 ? inst->num_tags : inst->total_num_columns; // NUMBER OF INITIAL CLUSTERS
     float** dist_matrix = Cluster::init_dist_matrix(active_clusters, num_clusters, inst->embedding_dim); // DISTANCE BETWEEN ALL CLUSTERS
-
     Cluster *stack = active_clusters; //NEAREST NEIGHBORS CHAIN
     active_clusters = active_clusters->next; // REMOVE THE HEAD FROM CHAINED LIST AND ADD TO NN CHAIN
-
+    
     Cluster *prev_nn, *nn; // PREVIOUS NN CLUSTER AND NN CLUSTER IN CHAINED LIST
     Cluster *previous, *current; // ITERATORS
     Cluster *new_cluster;
@@ -576,7 +620,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
     random_device rand_dev;
     mt19937 generator(rand_dev());
     uniform_real_distribution<double> distribution(0.0, 1.0);
-
     //WHILE THERE ARE CLUSTERS TO MERGE 
     while(stack != NULL)
     {
@@ -584,7 +627,7 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
         nn = active_clusters;
         previous = active_clusters;
         current = active_clusters->next;
-
+        
         //FIND NEAREST NEIGHBOR TO TOP STACK CLUSTER
         while(current != NULL)
         {
@@ -604,13 +647,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
         if( stack->is_NN_of != NULL ){
             diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
         }
-        //WITH STOCASTIC FACTOR
-        // if( stack->is_NN_of != NULL ){
-        //     if( distribution(generator) < pow( 1 - 0.5 * dist_matrix[stack->id][stack->is_NN_of->id], 10 ) )
-        //         diff_dists = -1.0;
-        //     else
-        //         diff_dists = dist_matrix[stack->id][stack->is_NN_of->id] - dist_matrix[stack->id][nn->id];
-        // }
 
         if( diff_dists < 0 || ( diff_dists == 0 && stack->is_NN_of->id < nn->id ) )
         {
@@ -624,7 +660,11 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
             state_id--;
 
             //REMOVE THE RNN FROM NN CHAIN
+            previous = stack;
+            current = stack->is_NN_of;
             stack = stack->is_NN_of->is_NN_of;
+            delete previous; //FREE UP MEMORY
+            delete current;
             if(stack == NULL && active_clusters->next != NULL){
                 stack = active_clusters;
                 active_clusters = active_clusters->next;
@@ -643,7 +683,11 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
                 active_clusters = Cluster::merge_clusters(stack, dist_matrix, cluster_id, state_id, inst);
                 cluster_id++;
                 state_id--;
+                previous = stack;
+                current = stack->is_NN_of;
                 stack = stack->is_NN_of->is_NN_of;
+                delete previous; // FREE UP MEMORY
+                delete current;
             }
         }
         //Test!
@@ -663,7 +707,6 @@ Organization* Organization::generate_organization_by_clustering(Instance * inst,
         // }vector<State*> states_level;
         // printf("\n\n");
     }
-
     org->root = active_clusters->state;
     org->init_all_states();
     org->update_effectiveness();

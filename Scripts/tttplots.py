@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from statsmodels.distributions.empirical_distribution import ECDF
 
 plt.rcParams.update({'font.size': 35, 'lines.markersize': 15, 'lines.linewidth': 3})
-
 def plotECDF(data1, data2):
     ecdf = ECDF(data1[0])
     data1 = pd.DataFrame(np.array([ecdf.x, ecdf.y]).T)
@@ -25,7 +24,7 @@ def plotECDF(data1, data2):
 
     # sns.color_palette(["green", "red"])
     # g = sns.lineplot(data=probs, x = 'x', y = 'y', hue = 'approach', legend = False)
-    plt.legend(title=None, loc='upper left', labels=['Nargesian', 'SA'])
+    plt.legend(title=None, loc='lower right', labels=['Organize', 'SA'])
 
     plt.xlabel("Time to target (seconds)")
     plt.ylabel("Cumulative probability")
@@ -38,14 +37,26 @@ def plotECDF(data1, data2):
 # data2 = pd.read_csv("../Data/Performance/Socrata/tttplot/sa-tttplot-100-3.txt", header = None)
 # plotECDF(data1, data2)
 
-data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/nargesian-tttplot-100-5.txt", header = None)
-data2 = pd.read_csv("../Data/Performance/Socrata/tttplot/sa-tttplot-100-5.txt", header = None)
+# data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/nargesian-tttplot-100-5.txt", header = None)
+# data2 = pd.read_csv("../Data/Performance/Socrata/tttplot/sa-tttplot-100-5.txt", header = None)
+# plotECDF(data1, data2)
+
+# data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/nargesian-tttplot-300-6.txt", header = None)
+# data2 = pd.read_csv("../Data/Performance/Socrata/tttplot/sa-tttplot-300-6.txt", header = None)
+# plotECDF(data1, data2)
+
+# data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/nargesian-tttplot-500-6.txt", header = None)
+# data2 = pd.read_csv("../Data/Performance/Socrata/tttplot/sa-tttplot-500-6.txt", header = None)
+# plotECDF(data1, data2)
+
+data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/data_tttplot-100-3.txt", header = None)
+data2 = pd.read_csv("../Data/Performance/Socrata/tttplot/sa-tttplot-100-3.txt", header = None)
 plotECDF(data1, data2)
 
-data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/nargesian-tttplot-300-6.txt", header = None)
+data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/data_tttplot-300-6.txt", header = None)
 data2 = pd.read_csv("../Data/Performance/Socrata/tttplot/sa-tttplot-300-6.txt", header = None)
 plotECDF(data1, data2)
 
-data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/nargesian-tttplot-500-6.txt", header = None)
+data1 = pd.read_csv("../Data/Performance/Socrata/tttplot/data_tttplot-500-6.txt", header = None)
 data2 = pd.read_csv("../Data/Performance/Socrata/tttplot/sa-tttplot-500-6.txt", header = None)
 plotECDF(data1, data2)

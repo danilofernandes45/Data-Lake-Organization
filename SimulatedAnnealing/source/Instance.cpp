@@ -1,5 +1,18 @@
 #include "Instance.hpp"
 
+Instance::~Instance() {
+    Table *t;
+    for (int i = 0; i < this->num_tables; i++) {
+        t = this->tables[i];
+        for (int j = 0; j < t->ncols; j++) {
+            delete t->sum_vectors[j];
+        }
+        delete t;
+    }
+    for (int i = 0; i < this->total_num_columns; i++)
+        delete this->map[i];
+}
+
 Instance* Instance::read_instance()
 {
     Table *table;
@@ -73,6 +86,37 @@ Instance* Instance::read_instance()
     // }
 
     return instance;
+}
+
+void Instance::print_stats()
+{
+    double mean = 0;
+    double sd = 0;
+    double similarity;
+    int table_id, col_id, num_dists;
+    float *sum_vector_i, *sum_vector_j;
+    cout << this->total_num_columns << endl;
+    for(int i = 0; i < this->total_num_columns; i++)
+    {
+        table_id = this->map[i][0];
+        col_id = this->map[i][1];
+        sum_vector_i = this->tables[table_id]->sum_vectors[col_id];
+        for(int j = i+1; j < this->total_num_columns; j++)
+        {
+            table_id = this->map[j][0];
+            col_id = this->map[j][1];
+            sum_vector_j = this->tables[table_id]->sum_vectors[col_id];
+            similarity = cossine_similarity(sum_vector_i, sum_vector_j, this->embedding_dim);
+            mean = mean + similarity;
+            sd = sd + pow(similarity, 2);
+        }
+    }
+    num_dists = ( pow(this->total_num_columns, 2) - this->total_num_columns ) / 2;
+    mean = mean / num_dists;
+    sd = ( sd - pow(mean, 2) ) / num_dists;
+
+    cout << mean << " " << sd << endl;
+
 }
 
 Instance* Instance::read_instance(string filename)

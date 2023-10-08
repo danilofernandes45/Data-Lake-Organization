@@ -1,5 +1,13 @@
 #include "State.hpp"
 
+State::~State(){
+    delete this->sum_vector;
+    delete this->reach_probs;
+    delete this->sum_children_probs; 
+    delete this->similarities;
+    delete this->reachable_states; 
+}
+
 template<typename T>
 bool CompareLevel::operator()(const T *state_1, const T *state_2) {
     if(state_1->level == state_2->level)
@@ -60,6 +68,7 @@ State* State::build(Instance *inst, int id, int i, int j)
     state->abs_column_id = id;
     state->similarities = new float[inst->total_num_columns];
     state->reach_probs = new float[inst->total_num_columns];
+    state->sum_children_probs = new float[inst->total_num_columns];
     state->is_tag = false;
     
     if( inst->num_tags > 0 )
@@ -94,6 +103,10 @@ State* State::copy(int total_num_columns, int max_num_states, int embedding_dim)
     copy->reach_probs = new float[total_num_columns];
     for (int i = 0; i < total_num_columns; i++)
         copy->reach_probs[i] = this->reach_probs[i];
+
+    copy->sum_children_probs = new float[total_num_columns];
+    for (int i = 0; i < total_num_columns; i++)
+        copy->sum_children_probs[i] = this->sum_children_probs[i];
 
     copy->similarities = new float[total_num_columns];
     for (int i = 0; i < total_num_columns; i++)
@@ -130,40 +143,53 @@ void State::update_level()
 
 void State::update_reach_probs(float gamma, int total_num_columns)
 {
-    // State *parent;
-    float sum_probs, prob;
+    //float sum_probs;
+    float prob;
     int num_children;
+    int reachable_cols_count = 0;
     set<State*>::iterator iter_p, iter_c;
-
-    // cout << this->abs_column_id << " - " << this->parents.size() << endl;
-    // for(int i = 0; i < 300; i++)
-    //     cout << this->sum_vector[i] << " ";
-
-    // cout << endl;
-
-    if( this->parents.size() > 0 )
-    {   
+    if( this->parents.size() > 0 ) {   
         this->overall_reach_prob = 0;
-        // parent = *(this->parents.begin());
-        // this->level = parent->level + 1;
-
         //FOR EACH INTERESTING TOPIC
         for (int i = 0; i < total_num_columns; i++) {
-            //FOR EACH PARENT
-            this->reach_probs[i] = 0; 
-            for( State * parent : this->parents )
-            {
-                num_children = parent->children.size();
-                sum_probs = 0;
-                //WARNING: THIS CAN BE OPTIMIZED
-                for(State * child : parent->children )
-                    sum_probs += exp( gamma * child->similarities[i] / num_children);
-                        
-                prob = exp( gamma * this->similarities[i] / num_children ) / sum_probs;
-                this->reach_probs[i] += prob * parent->reach_probs[i];
+            if(this->reachable_states[i]) { //ALOPRATION
+                reachable_cols_count++;
+                //FOR EACH PARENT
+                this->reach_probs[i] = 0;
+                for( State * parent : this->parents )
+                {
+                    num_children = parent->children.size();
+                    //sum_probs = 0;
+                    //WARNING: THIS CAN BE OPTIMIZED
+                    //for(State * child : parent->children )
+                    //    sum_probs += exp( gamma * child->similarities[i] / num_children);
+                            
+                    prob = exp( gamma * this->similarities[i] / num_children ) / parent->sum_children_probs[i];
+                    this->reach_probs[i] += prob * parent->reach_probs[i];
+
+                    //cout << sum_probs - parent->sum_children_probs[i] << endl; 
+
+                    //ALOPRATION
+                    // sum_probs = 0;
+                    // for(State * child : parent->children )
+                    //     sum_probs += (1 + child->similarities[i]);
+                    // prob = (1 + this->similarities[i]) / sum_probs;
+                    // this->reach_probs[i] += prob * parent->reach_probs[i];
+                }
+
+                this->overall_reach_prob += this->reach_probs[i];
             }
-            this->overall_reach_prob += this->reach_probs[i];
         }
-        this->overall_reach_prob /= total_num_columns;
+        // this->overall_reach_prob /= total_num_columns;
+        this->overall_reach_prob /= reachable_cols_count; // ALOPRATION
+    }
+    //COMPUTE CHILDREN PROBS SUM
+    for (int i = 0; i < total_num_columns; i++) {
+        if(this->reachable_states[i]) { // ALOPRATION
+            this->sum_children_probs[i] = 0;
+            num_children = this->children.size();
+            for(State * child : this->children )
+                this->sum_children_probs[i] += exp( gamma * child->similarities[i] / num_children);
+        }
     }
 }

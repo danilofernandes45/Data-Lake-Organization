@@ -28,10 +28,12 @@ class Organization
         time_t t_start; // TIME WHEN CREATE THE ORGANIZATION
         time_t t_end; // TIME WHEN FINISH THE OPTIMIZATION
         
+        ~Organization();
         void init_all_states();
         void update_effectiveness();
         void success_probabilities();
         Organization* copy();
+        double delete_early_eval(int level, int level_id);
         void delete_parent(int level, int level_id, int update_id);
         void delete_level(int level, int update_id);
         void add_parent(int level, int level_id, int update_id);

@@ -17,7 +17,7 @@ using namespace std;
 
 void print_organization(Organization *org)
 {
-    for (int i = 0; i < org->all_states.size(); i++)
+    for(unsigned i = 0; i < org->all_states.size(); i++)
     {
         for (State * state : org->all_states[i])
         {
@@ -34,7 +34,7 @@ void print_organization(Organization *org)
     }
     cout << "\n";
 
-    for (int i = 0; i < org->all_states.size(); i++)
+    for(unsigned i = 0; i < org->all_states.size(); i++)
     {
         for (State * state : org->all_states[i])
         {
@@ -56,14 +56,14 @@ void compare_orgs(Organization *org, Organization *new_org)
 
     assert( org->all_states.size() == new_org->all_states.size() );
 
-    for (int i = 0; i < org->all_states.size(); i++)
+    for(unsigned i = 0; i < org->all_states.size(); i++)
     {
         assert(org->all_states[i].size() == new_org->all_states[i].size());
 
         iter_1 = org->all_states[i].begin();
         iter_2 = new_org->all_states[i].begin();
 
-        for(int j = 0; j < org->all_states[i].size(); j++)
+        for(unsigned j = 0; j < org->all_states[i].size(); j++)
         {
             assert( (*iter_1)->abs_column_id == (*iter_2)->abs_column_id );
             assert( (*iter_1)->parents.size() == (*iter_2)->parents.size() );
@@ -72,7 +72,7 @@ void compare_orgs(Organization *org, Organization *new_org)
             // cout << "Parents" << endl;
             // state_1 = (*iter_1)->parents.begin();
             // state_2 = (*iter_2)->parents.begin();
-            // for (int s = 0; s < (*iter_1)->parents.size(); s++)
+            // for(unsigned s = 0; s < (*iter_1)->parents.size(); s++)
             // {
             //     cout << (*state_1)->level << " " << (*state_1)->abs_column_id << " " << (*state_2)->level << " " << (*state_2)->abs_column_id << endl;
             //     state_1++;
@@ -82,7 +82,7 @@ void compare_orgs(Organization *org, Organization *new_org)
 
             state_1 = (*iter_1)->parents.begin();
             state_2 = (*iter_2)->parents.begin();
-            for (int s = 0; s < (*iter_1)->parents.size(); s++)
+            for(unsigned s = 0; s < (*iter_1)->parents.size(); s++)
             {
                 assert( (*state_1)->abs_column_id == (*state_2)->abs_column_id );
                 state_1++;
@@ -92,7 +92,7 @@ void compare_orgs(Organization *org, Organization *new_org)
             // cout << "Children" << endl;
             // state_1 = (*iter_1)->children.begin();
             // state_2 = (*iter_2)->children.begin();
-            // for (int s = 0; s < (*iter_1)->children.size(); s++)
+            // for(unsigned s = 0; s < (*iter_1)->children.size(); s++)
             // {
             //     cout << (*state_1)->level << " " << (*state_1)->abs_column_id << " " << (*state_2)->level << " " << (*state_2)->abs_column_id << endl;
             //     state_1++;
@@ -104,7 +104,7 @@ void compare_orgs(Organization *org, Organization *new_org)
 
             state_1 = (*iter_1)->children.begin();
             state_2 = (*iter_2)->children.begin();
-            for (int s = 0; s < (*iter_1)->children.size(); s++)
+            for(unsigned s = 0; s < (*iter_1)->children.size(); s++)
             {
                 assert( (*state_1)->abs_column_id == (*state_2)->abs_column_id );
                 state_1++;
@@ -117,14 +117,15 @@ void compare_orgs(Organization *org, Organization *new_org)
     }
 }
 
-void perturbation(Organization *org, int update_id)
+bool perturbation(Organization *org, int update_id)
 {
     //GENERATOR OF RANDOM NUMBERS
     random_device rand_dev;
     mt19937 generator(rand_dev());
     uniform_real_distribution<double> distribution(0.0, 1.0);
-    double x, sum = 0;
+    double x, delta, sum = 0;
     int level, level_id, i;
+    bool perturbed = false;
 
     //Harmonic number
     double H_n = 0;
@@ -160,11 +161,20 @@ void perturbation(Organization *org, int update_id)
 
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     srand(seed);
-    if( rand() % 2 == 0 )
+    if( rand() % 2 == 0 ) {
         org->add_parent(level, level_id, update_id);
-    else
-        // org->delete_level(level, update_id);
+        perturbed = true;
+    } else {
+        delta  = org->delete_early_eval(level, level_id);
+        // cout << "Delta D: " << delta << endl;
+        // if(delta >= 0) {
+        //     org->delete_parent(level, level_id, update_id);
+        //     perturbed = true;
+        // }
         org->delete_parent(level, level_id, update_id);
+        perturbed = true;
+    }
+    return perturbed;
 }
 
 Organization* simulated_annealing(Organization *org, int max_iter, float alpha, int K_max, double timeout, float target)
@@ -180,38 +190,42 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
     random_device rand_dev;
     mt19937 generator(rand_dev());
     uniform_real_distribution<float> distribution(0.0, 1.0);
-
     int count = 0;
 
     while( T > 0 && count < K_max ) {
         for(int i = 0; i < max_iter; i++) {
-            perturbation(new_org, update_id);
             count++;
-            delta = org->effectiveness - new_org->effectiveness;
-            if( delta < 0 || distribution(generator) < exp(-delta/T) ) {
-                org = new_org->copy();
-                update_id = update_id + 2;
-                if( org->effectiveness > best_org->effectiveness ) {
-                    best_org = org;
-                    count = 0;
+            if( perturbation(new_org, update_id) ) {
+                delta = org->effectiveness - new_org->effectiveness;
+                // std::cout << "Delta SA: " << delta << endl;
+                if( delta < 0 || distribution(generator) < exp(-delta/T) ) {
+                    org = new_org->copy();
+                    update_id = update_id + 2;
+                    if( org->effectiveness > best_org->effectiveness ) {
+                        best_org = org;
+                        count = 0;
+                    }
+                } else {
+                    delete new_org;
+                    new_org = org->copy();
                 }
-            } else {
-                // new_org->undo_last_operation(org);
-                new_org = org->copy();
-            }
 
-            // compare_orgs(org, new_org);
-
-            if( new_org->all_states.size() == 2 )
-                new_org = best_org->copy();
-            
+                if( new_org->all_states.size() == 2 ) {
+                    delete new_org;
+                    new_org = best_org->copy();
+                }
+            }             
             time(&best_org->t_end);
             if( difftime(best_org->t_end, best_org->t_start) >= timeout || best_org->effectiveness >= target)
                 return best_org;
-
         }
         T = alpha * T;
     }
+
+    delete new_org;
+    if(org != best_org)
+        delete org;
+
     return best_org;
 }
 
@@ -224,21 +238,25 @@ Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, i
     Organization *org = Organization::generate_organization_by_clustering(instance, gamma);
     org->t_start = t_start;
     time(&org->t_end);
-
     best_org = org;
+    // best_org = new Organization;
+    // best_org->effectiveness = 0;
+    // best_org->t_end = t_start;
 
-    int i = 0;
     // while ( i < num_restarts && difftime(best_org->t_end, t_start) < timeout )
     while ( difftime(best_org->t_end, t_start) < timeout && best_org->effectiveness < target )
     {
-        new_org = simulated_annealing(org, max_iter, alpha, K_max, timeout, target);
-        if( new_org->effectiveness > best_org->effectiveness )
+        // new_org = Organization::generate_organization_by_clustering(instance, gamma);
+        new_org = simulated_annealing(org->copy(), max_iter, alpha, K_max, timeout, target);
+        if( new_org->effectiveness > best_org->effectiveness ) {
             best_org = new_org;
-        else 
-            time(&best_org->t_end);
-        i++;
+            best_org->t_start = t_start;
+        } else {
+            delete new_org;
+        }
+        time(&best_org->t_end);
+
     }
-    // cout << i << ", ";
     return best_org;    
 }
 
@@ -255,6 +273,8 @@ int main(int argc, char* argv[]) {
     auto args = parseCommandline(argc, argv);
 
     Instance * instance = Instance::read_instance(args["-i"]);
+    // instance->print_stats();
+    // return 0;
     // instance->num_tags = 0;
 
     // float gamma = 25.0;
@@ -269,21 +289,25 @@ int main(int argc, char* argv[]) {
 
     Organization *org;
 
-    org = Organization::generate_basic_organization(instance, gamma);
-    cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
-    org->success_probabilities();
-    cout << '\n';
+    // org = Organization::generate_basic_organization(instance, gamma);
+    // cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
+    // org->success_probabilities();
+    // cout << '\n';
 
     instance->num_tags = 0;
-    org = Organization::generate_basic_organization(instance, gamma);
+    //org = Organization::generate_organization_by_clustering(instance, gamma);
+    //cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
 
-    // org = multistart_sa(instance, gamma, -1, max_iters, alpha, max_failures, timeout, target); // 500
+    org = multistart_sa(instance, gamma, -1, max_iters, alpha, max_failures, timeout, target); // 500
 
     // cout << -org->effectiveness << endl; //FOR IRACE CALIBRATION
     // cout << difftime(org->t_end, org->t_start) << endl; // FOR TTPLOT
     cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
     
-    org->success_probabilities();
+    // org->success_probabilities();
+
+    delete org;
+    delete instance;
 
     return 0;
 }

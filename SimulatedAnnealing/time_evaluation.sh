@@ -2,7 +2,7 @@
 function eval() {
     for i in $(seq 1 50)
     do
-        ./sa --gamma 25 --time $3 --target $4 --Ki 1 --Kf 31 --alpha 0.0094 -i ../Data/DataLakes/Socrata/$1/topic_vectors-$1-$2.txt
+        ./sa --gamma 25 --time $3 --target $4 --Ki 1 --Kf 31 --alpha 0.0094 -i ../Data/DataLakes/Socrata/Vectorized/$1/topic_vectors-$1-$2.txt
     done
 }
 

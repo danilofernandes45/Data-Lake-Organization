@@ -53,13 +53,13 @@ Cluster* Cluster::init_clusters(Instance * inst)
             } else {
                 state->compute_similarities(inst);
                 //IF THE TAGS ARE RELATE TO THE TABLE
-                for (int k = 0; k < inst->tables[i]->tags_table.size(); k++)
+                for (unsigned k = 0; k < inst->tables[i]->tags_table.size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_table[k];
                     State::add_parenthood(tags[tag_id], state, inst->embedding_dim);
                 }
                 //IF THE TAGS ARE RELATED TO THE COLUMNS
-                for (int k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
+                for (unsigned k = 0; k < inst->tables[i]->tags_cols[j].size(); k++)
                 {
                     tag_id = inst->tables[i]->tags_cols[j][k];
                     State::add_parenthood(tags[tag_id], state, inst->embedding_dim);
@@ -157,6 +157,12 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
     State *state_1 = stack->state;
     State *state_2 = stack->is_NN_of->state;
 
+    // random_device rand_dev;
+    // mt19937 generator(rand_dev());
+    // uniform_real_distribution<double> distribution(0.0, 1.0);
+    // float alpha = 0.0;
+    // float similarity;
+
     //CREATE A NEW STATE IN THE ORGANIZATION WHICH WILL BE PARENT OF RNN STATES
     State *new_state = State::build(inst, state_id, -1, -1);
 
@@ -189,11 +195,36 @@ Cluster* Cluster::merge_clusters(Cluster *stack, float **dist_matrix, int cluste
 
     new_state->compute_similarities(inst);
 
+    // similarity = (2 - dist_matrix[id_1][id_2]) / 2;
+    // if(state_1->abs_column_id < 0 && state_2->abs_column_id < 0 && distribution(generator) < alpha * similarity ){
+    //     // Eliminate the two clusters and group their subclusters
+    //     for(State * s : state_1->children){
+    //         s->parents.clear();
+    //         s->parents.insert(new_state);
+    //         new_state->children.insert(s);
+    //     }
+    //     for(State * s : state_2->children){
+    //         s->parents.clear();
+    //         s->parents.insert(new_state);
+    //         new_state->children.insert(s);
+    //     }
+    //     delete state_1;
+    //     delete state_2;
+    // } else {
+    //     // Group the two cluster into a new one
+    //     new_state->children.insert(state_1);
+    //     new_state->children.insert(state_2);
+
+    //     state_1->parents.insert(new_state);
+    //     state_2->parents.insert(new_state);
+    // }   
+
+    // Group the two cluster into a new one
     new_state->children.insert(state_1);
     new_state->children.insert(state_2);
 
     state_1->parents.insert(new_state);
-    state_2->parents.insert(new_state);   
+    state_2->parents.insert(new_state);
 
     //CREATE A NEW CLUSTER CONTAINING THE NEW STATE
     Cluster *new_cluster = new Cluster;
