@@ -231,6 +231,7 @@ Organization* simulated_annealing(Organization *org, int max_iter, float alpha, 
 
 Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, int max_iter, float alpha, int K_max, double timeout, float target) {
     
+    int count = 0;
     time_t t_start;
     time(&t_start);
 
@@ -255,8 +256,10 @@ Organization* multistart_sa(Instance *instance, float gamma, int num_restarts, i
             delete new_org;
         }
         time(&best_org->t_end);
+        count++;
 
     }
+    cout << count << ", ";
     return best_org;    
 }
 
@@ -266,6 +269,118 @@ map<string, string> parseCommandline(int argc, char* argv[]) {
         args.insert(pair<string, string>(argv[i], argv[i+1]));
     return args;
 }
+
+// ILS ---------------------------------------------------------------------------------
+
+Organization* best_neighbor(Organization *org, int update_id, int neighborhood_struct, double timeout)
+{
+    Organization *aux; 
+    Organization *best_org = org->copy();
+    Organization *new_org;
+    // int best_level, best_level_id, min_level;
+    // int best_min_level = -1;
+    for(int level = 2; level < org->all_states.size(); level++)
+    {
+        for(int level_id = 0; level_id < org->all_states[level].size(); level_id++)
+        { 
+            new_org = org->copy();
+            if(neighborhood_struct == 0){
+                new_org->add_parent(level, level_id, update_id);
+            } else {
+                new_org->delete_parent(level, level_id, update_id);
+            }
+            if( new_org->effectiveness > best_org->effectiveness ) {
+                delete best_org;
+                best_org = new_org;
+            } else {
+                delete new_org;
+            }
+
+            time(&org->t_end);
+            if( difftime(org->t_end, org->t_start) >= timeout ) { return best_org; }
+
+        }
+    }
+    return best_org;
+}
+
+pair<Organization*, int> rvnd_local_search(Organization *org, int update_id, double timeout)
+{
+    Organization *new_org;
+    srand(std::chrono::system_clock::now().time_since_epoch().count());
+    int neighborhood_struct = rand() % 2;
+    unsigned k = 0;
+
+    while (k < 2 && difftime(org->t_end, org->t_start) < timeout)
+    {
+        new_org = best_neighbor(org, update_id, neighborhood_struct, timeout);
+        // cout << new_org->effectiveness << endl;
+        if( new_org->effectiveness > org->effectiveness ){
+            srand(std::chrono::system_clock::now().time_since_epoch().count());
+            neighborhood_struct = rand() % 2;
+            k = 0;
+            org = new_org;
+            update_id++;
+            // cout << "Accepted" << endl;
+        } else {
+            k++;
+            // cout << "Rejected" << endl;
+        }
+        time(&org->t_end);
+    }
+    return {org, update_id};
+}
+
+Organization* perturbation_ils(Organization *org, int update_id)
+{
+    Organization *new_org = org->copy();
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    srand(seed);
+
+    int level = rand() % org->all_states.size();
+    level = max(level, 2);
+    int level_id = rand() % org->all_states[level].size();
+
+    if( rand() % 2 == 0 )
+        new_org->add_parent(level, level_id, update_id);
+    else
+        new_org->delete_parent(level, level_id, update_id);
+    
+    return new_org;
+}
+
+Organization* iterated_local_search(Instance *instance, float gamma, double timeout, float target)
+{
+    int update_id = 1;
+    Organization *new_org;
+    pair<Organization*, int> local_opt;
+
+    time_t t_start;
+    time(&t_start);
+
+    Organization *best_org = Organization::generate_organization_by_clustering(instance, gamma);
+    best_org->t_start = t_start;
+    best_org->t_end = t_start;
+    local_opt = rvnd_local_search(best_org, update_id, timeout);
+    best_org = local_opt.first;
+    update_id = local_opt.second;
+
+    while ( difftime(best_org->t_end, t_start) < timeout && best_org->effectiveness < target)
+    {
+        new_org = perturbation_ils(best_org, update_id);
+        local_opt = rvnd_local_search(new_org, update_id + 1, timeout);
+        if( local_opt.first->effectiveness > best_org->effectiveness ){
+            best_org = local_opt.first;
+            update_id = local_opt.second;
+            best_org->t_start = t_start;
+        }
+        time(&best_org->t_end);
+    }
+    return best_org;
+}
+
+// ILS ------------------------------------------------------------------------------------------------
+
 
 int main(int argc, char* argv[]) {
 
@@ -299,12 +414,13 @@ int main(int argc, char* argv[]) {
     //cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
 
     org = multistart_sa(instance, gamma, -1, max_iters, alpha, max_failures, timeout, target); // 500
+    // org = iterated_local_search(instance, gamma, timeout, target);
 
     // cout << -org->effectiveness << endl; //FOR IRACE CALIBRATION
     // cout << difftime(org->t_end, org->t_start) << endl; // FOR TTPLOT
     cout << org->effectiveness << ", " << org->all_states.size() << ", " << difftime(org->t_end, org->t_start) << "\n";
     
-    // org->success_probabilities();
+    org->success_probabilities();
 
     delete org;
     delete instance;

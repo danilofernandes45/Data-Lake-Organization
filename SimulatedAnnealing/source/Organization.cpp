@@ -403,6 +403,7 @@ void Organization::update_descendants(vector<State*> * ancestors, int update_id)
     int old_level;
     State *current;
     vector<State*> stack;
+    if( ancestors->size() == 0 ){ return; }
     topological_sort(ancestors, &stack, update_id);
     //UPDATE THE STATES ORDERED BY TOPOLOGICAL SORT
     while ( !stack.empty() ) 
