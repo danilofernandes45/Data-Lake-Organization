@@ -9,13 +9,14 @@ def plotSuccessProbs(data, size):
     success_probs = pd.DataFrame()
     ids = np.arange(1, size + 1)
     marker_pos = np.arange(0, size, size // 10) + (size // 10)    
-    line_type = [':s', '-.P' ,'--o', '-^']
-    markers = ['s', 'P' ,'o', '^']
+    line_type = [':s', '-.P' ,'--o', '-^', '-*']
+    markers = ['s', 'P' ,'o', '^', '*']
+    color_ids = [4, 1, 2, 3, 0]
     for i in range(data.shape[0]):
         row = data.iloc[i]
         probs = np.array(row['SuccessProbs'].split(' '), dtype = 'float')
-        plt.plot(ids, probs, line_type[i], markersize = 0.1)
-        plt.scatter(marker_pos, probs[marker_pos-1], marker = markers[i])
+        plt.plot(ids, probs, line_type[i], markersize = 0.1, color = sns.color_palette()[color_ids[i]])
+        plt.scatter(marker_pos, probs[marker_pos-1], marker = markers[i], color = sns.color_palette()[color_ids[i]])
     plt.legend(title=None, loc='upper left', labels=data['Approach'], markerscale = 150)
     plt.xlabel("Table ID")
     plt.ylabel("Success Probability")
