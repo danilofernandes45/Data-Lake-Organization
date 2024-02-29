@@ -6,8 +6,10 @@ function eval() {
 	done
 }
 
-for i in $(seq 1 1)
-do
-	# eval $1 $2 $i > ../Data/Performance/Socrata/SA/$1/perform-$1-$i-2.csv
-	eval $1 $2 $i > ../Data/Performance/Socrata/ILS/$1/perform-$1-$i-2.csv
-done
+# for i in $(seq 1 1)
+# do
+# 	eval $1 $2 $i > ../Data/Performance/Socrata/SA/$1/perform-$1-$i-2.csv
+# 	#eval $1 $2 $i > ../Data/Performance/Socrata/ILS/$1/perform-$1-$i-2.csv
+# done
+
+eval 100 300 7 > out_perform_100-7.txt
